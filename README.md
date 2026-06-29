@@ -23,5 +23,6 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 
 ## Documents
 
+- [Requirements v0.2](docs/requirements-v0.2.md)
 - [Requirements v0.1](docs/requirements-v0.1.md)
 
