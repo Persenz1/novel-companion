@@ -1,0 +1,27 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs and temp files
+*.log
+tmp/
+temp/
+
+# Local secrets
+.env
+.env.*
+
+# Generated artifacts
+dist/
+build/
+out/
+
+# Local data and private book files
+data/source/
+data/private/
+*.epub
+*.txt
+*.pdf
+
