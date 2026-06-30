@@ -25,4 +25,14 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 
 - [Requirements v0.2](docs/requirements-v0.2.md)
 - [Requirements v0.1](docs/requirements-v0.1.md)
+- [Requirements v0.3](docs/requirements-v0.3.md)
+- [Phase 1 Implementation Spec](docs/phase-1-implementation-spec.md)
+- [Data Format v0.1](docs/data-format-v0.1.md)
+- [Validation Spec v0.1](docs/validation-spec-v0.1.md)
+- [Workflow Spec v0.1](docs/workflow-spec-v0.1.md)
+- [Agent Operation Spec v0.1](docs/agent-operation-spec-v0.1.md)
+- [Project Prompts v0.1](docs/project-prompts-v0.1.md)
+- [Project Audit Prompt v0.1](docs/project-audit-prompt-v0.1.md)
+- [Gray Tower Test Book](docs/test-book-gray-tower.md)
+- [Discussion Archive 2026-06-30](docs/discussion-archive-2026-06-30.md)
 
