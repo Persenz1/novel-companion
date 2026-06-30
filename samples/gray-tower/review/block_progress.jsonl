@@ -1,0 +1,17 @@
+{"block_id":"v01.c01.b0002","status":"reviewed","candidate_count":4,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c01.b0003","status":"reviewed","candidate_count":2,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c01.b0005","status":"reviewed","candidate_count":3,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c01.b0006","status":"reviewed","candidate_count":3,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c01.b0009","status":"reviewed","candidate_count":4,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c02.b0002","status":"reviewed","candidate_count":5,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c02.b0005","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c02.b0009","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c03.b0002","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c03.b0004","status":"reviewed","candidate_count":2,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c03.b0007","status":"has_open_question","candidate_count":4,"open_question_count":1,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.c03.b0008","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.epilogue.b0002","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.epilogue.b0004","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.prologue.b0005","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.prologue.b0006","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}
+{"block_id":"v01.prologue.b0007","status":"reviewed","candidate_count":1,"open_question_count":0,"updated_by":"user","updated_at":"2026-06-30T00:00:00Z"}

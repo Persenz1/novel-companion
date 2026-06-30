@@ -1,0 +1,58 @@
+{
+  "schema_version": "0.1.0",
+  "pack_id": "gray_tower_project_v1",
+  "pack_name": "灰塔学院测试卷工程包",
+  "pack_type": "project",
+  "series": {
+    "id": "gray_tower",
+    "title": "灰塔学院测试卷"
+  },
+  "volumes": [
+    {
+      "id": "v01",
+      "title": "第一卷",
+      "main_text": "parsed/volumes/v01.md",
+      "chapters": [
+        {
+          "id": "v01.prologue",
+          "order": 0,
+          "kind": "prologue",
+          "title": "序章：灰塔学院"
+        },
+        {
+          "id": "v01.c01",
+          "order": 1,
+          "kind": "chapter",
+          "title": "第一章：点数公告"
+        },
+        {
+          "id": "v01.c02",
+          "order": 2,
+          "kind": "chapter",
+          "title": "第二章：沉默的小组"
+        },
+        {
+          "id": "v01.c03",
+          "order": 3,
+          "kind": "chapter",
+          "title": "第三章：白卡测试"
+        },
+        {
+          "id": "v01.epilogue",
+          "order": 4,
+          "kind": "epilogue",
+          "title": "终章：未寄出的名单"
+        }
+      ]
+    }
+  ],
+  "features": {
+    "contains_text": true,
+    "contains_assets": true,
+    "contains_ja_reference": true
+  },
+  "rights": {
+    "usage_scope": "sample_only",
+    "rights_note": "原创测试文本，可用于项目测试。"
+  }
+}

@@ -1,0 +1,2016 @@
+{
+  "schema_version": "0.1.0",
+  "series_id": "gray_tower",
+  "generated_at": "2026-06-30T04:46:12.341Z",
+  "source_fingerprint": null,
+  "source_summary": {
+    "manifest_path": "manifest.json",
+    "parsed_files": {
+      "blocks": {
+        "path": "parsed/blocks.jsonl",
+        "count": 41
+      },
+      "scenes": {
+        "path": "parsed/scenes.jsonl",
+        "count": 5
+      },
+      "assets": {
+        "path": "parsed/assets.jsonl",
+        "count": 5
+      },
+      "asset_anchors": {
+        "path": "parsed/asset_anchors.jsonl",
+        "count": 5
+      },
+      "alignments": {
+        "path": "parsed/alignments.jsonl",
+        "count": 4
+      }
+    },
+    "accepted_files": {
+      "entities": {
+        "path": "accepted/entities.jsonl",
+        "count": 12
+      },
+      "facts": {
+        "path": "accepted/facts.jsonl",
+        "count": 4
+      },
+      "events": {
+        "path": "accepted/events.jsonl",
+        "count": 3
+      },
+      "relation_changes": {
+        "path": "accepted/relation_changes.jsonl",
+        "count": 2
+      },
+      "metrics": {
+        "path": "accepted/metrics.jsonl",
+        "count": 2
+      },
+      "metric_changes": {
+        "path": "accepted/metric_changes.jsonl",
+        "count": 3
+      },
+      "character_cards": {
+        "path": "accepted/character_cards.jsonl",
+        "count": 1
+      },
+      "term_cards": {
+        "path": "accepted/term_cards.jsonl",
+        "count": 1
+      },
+      "speaker_labels": {
+        "path": "accepted/speaker_labels.jsonl",
+        "count": 3
+      },
+      "asset_subjects": {
+        "path": "accepted/asset_subjects.jsonl",
+        "count": 3
+      }
+    }
+  },
+  "validation_report": {
+    "path": "reports/validation_report.json",
+    "status": "passed"
+  },
+  "timeline": {
+    "positions": [
+      {
+        "id": "v01.start",
+        "kind": "volume_start",
+        "order": 0
+      },
+      {
+        "id": "v01.prologue.start",
+        "kind": "chapter_start",
+        "order": 1
+      },
+      {
+        "id": "v01.prologue.b0001",
+        "kind": "block",
+        "order": 2
+      },
+      {
+        "id": "v01.prologue.b0002",
+        "kind": "block",
+        "order": 3
+      },
+      {
+        "id": "v01.prologue.b0003",
+        "kind": "block",
+        "order": 4
+      },
+      {
+        "id": "v01.prologue.b0004",
+        "kind": "block",
+        "order": 5
+      },
+      {
+        "id": "v01.prologue.b0005",
+        "kind": "block",
+        "order": 6
+      },
+      {
+        "id": "v01.prologue.b0006",
+        "kind": "block",
+        "order": 7
+      },
+      {
+        "id": "v01.prologue.b0007",
+        "kind": "block",
+        "order": 8
+      },
+      {
+        "id": "v01.prologue.end",
+        "kind": "chapter_end",
+        "order": 9
+      },
+      {
+        "id": "v01.c01.start",
+        "kind": "chapter_start",
+        "order": 10
+      },
+      {
+        "id": "v01.c01.b0001",
+        "kind": "block",
+        "order": 11
+      },
+      {
+        "id": "v01.c01.b0002",
+        "kind": "block",
+        "order": 12
+      },
+      {
+        "id": "v01.c01.b0003",
+        "kind": "block",
+        "order": 13
+      },
+      {
+        "id": "v01.c01.b0004",
+        "kind": "block",
+        "order": 14
+      },
+      {
+        "id": "v01.c01.b0005",
+        "kind": "block",
+        "order": 15
+      },
+      {
+        "id": "v01.c01.b0006",
+        "kind": "block",
+        "order": 16
+      },
+      {
+        "id": "v01.c01.b0007",
+        "kind": "block",
+        "order": 17
+      },
+      {
+        "id": "v01.c01.b0008",
+        "kind": "block",
+        "order": 18
+      },
+      {
+        "id": "v01.c01.b0009",
+        "kind": "block",
+        "order": 19
+      },
+      {
+        "id": "v01.c01.end",
+        "kind": "chapter_end",
+        "order": 20
+      },
+      {
+        "id": "v01.c02.start",
+        "kind": "chapter_start",
+        "order": 21
+      },
+      {
+        "id": "v01.c02.b0001",
+        "kind": "block",
+        "order": 22
+      },
+      {
+        "id": "v01.c02.b0002",
+        "kind": "block",
+        "order": 23
+      },
+      {
+        "id": "v01.c02.b0003",
+        "kind": "block",
+        "order": 24
+      },
+      {
+        "id": "v01.c02.b0004",
+        "kind": "block",
+        "order": 25
+      },
+      {
+        "id": "v01.c02.b0005",
+        "kind": "block",
+        "order": 26
+      },
+      {
+        "id": "v01.c02.b0006",
+        "kind": "block",
+        "order": 27
+      },
+      {
+        "id": "v01.c02.b0007",
+        "kind": "block",
+        "order": 28
+      },
+      {
+        "id": "v01.c02.b0008",
+        "kind": "block",
+        "order": 29
+      },
+      {
+        "id": "v01.c02.b0009",
+        "kind": "block",
+        "order": 30
+      },
+      {
+        "id": "v01.c02.end",
+        "kind": "chapter_end",
+        "order": 31
+      },
+      {
+        "id": "v01.c03.start",
+        "kind": "chapter_start",
+        "order": 32
+      },
+      {
+        "id": "v01.c03.b0001",
+        "kind": "block",
+        "order": 33
+      },
+      {
+        "id": "v01.c03.b0002",
+        "kind": "block",
+        "order": 34
+      },
+      {
+        "id": "v01.c03.b0003",
+        "kind": "block",
+        "order": 35
+      },
+      {
+        "id": "v01.c03.b0004",
+        "kind": "block",
+        "order": 36
+      },
+      {
+        "id": "v01.c03.b0005",
+        "kind": "block",
+        "order": 37
+      },
+      {
+        "id": "v01.c03.b0006",
+        "kind": "block",
+        "order": 38
+      },
+      {
+        "id": "v01.c03.b0007",
+        "kind": "block",
+        "order": 39
+      },
+      {
+        "id": "v01.c03.b0008",
+        "kind": "block",
+        "order": 40
+      },
+      {
+        "id": "v01.c03.end",
+        "kind": "chapter_end",
+        "order": 41
+      },
+      {
+        "id": "v01.epilogue.start",
+        "kind": "chapter_start",
+        "order": 42
+      },
+      {
+        "id": "v01.epilogue.b0001",
+        "kind": "block",
+        "order": 43
+      },
+      {
+        "id": "v01.epilogue.b0002",
+        "kind": "block",
+        "order": 44
+      },
+      {
+        "id": "v01.epilogue.b0003",
+        "kind": "block",
+        "order": 45
+      },
+      {
+        "id": "v01.epilogue.b0004",
+        "kind": "block",
+        "order": 46
+      },
+      {
+        "id": "v01.epilogue.b0005",
+        "kind": "block",
+        "order": 47
+      },
+      {
+        "id": "v01.epilogue.b0006",
+        "kind": "block",
+        "order": 48
+      },
+      {
+        "id": "v01.epilogue.b0007",
+        "kind": "block",
+        "order": 49
+      },
+      {
+        "id": "v01.epilogue.b0008",
+        "kind": "block",
+        "order": 50
+      },
+      {
+        "id": "v01.epilogue.end",
+        "kind": "chapter_end",
+        "order": 51
+      },
+      {
+        "id": "v01.end",
+        "kind": "volume_end",
+        "order": 52
+      }
+    ],
+    "order": {
+      "v01.start": 0,
+      "v01.prologue.start": 1,
+      "v01.prologue.b0001": 2,
+      "v01.prologue.b0002": 3,
+      "v01.prologue.b0003": 4,
+      "v01.prologue.b0004": 5,
+      "v01.prologue.b0005": 6,
+      "v01.prologue.b0006": 7,
+      "v01.prologue.b0007": 8,
+      "v01.prologue.end": 9,
+      "v01.c01.start": 10,
+      "v01.c01.b0001": 11,
+      "v01.c01.b0002": 12,
+      "v01.c01.b0003": 13,
+      "v01.c01.b0004": 14,
+      "v01.c01.b0005": 15,
+      "v01.c01.b0006": 16,
+      "v01.c01.b0007": 17,
+      "v01.c01.b0008": 18,
+      "v01.c01.b0009": 19,
+      "v01.c01.end": 20,
+      "v01.c02.start": 21,
+      "v01.c02.b0001": 22,
+      "v01.c02.b0002": 23,
+      "v01.c02.b0003": 24,
+      "v01.c02.b0004": 25,
+      "v01.c02.b0005": 26,
+      "v01.c02.b0006": 27,
+      "v01.c02.b0007": 28,
+      "v01.c02.b0008": 29,
+      "v01.c02.b0009": 30,
+      "v01.c02.end": 31,
+      "v01.c03.start": 32,
+      "v01.c03.b0001": 33,
+      "v01.c03.b0002": 34,
+      "v01.c03.b0003": 35,
+      "v01.c03.b0004": 36,
+      "v01.c03.b0005": 37,
+      "v01.c03.b0006": 38,
+      "v01.c03.b0007": 39,
+      "v01.c03.b0008": 40,
+      "v01.c03.end": 41,
+      "v01.epilogue.start": 42,
+      "v01.epilogue.b0001": 43,
+      "v01.epilogue.b0002": 44,
+      "v01.epilogue.b0003": 45,
+      "v01.epilogue.b0004": 46,
+      "v01.epilogue.b0005": 47,
+      "v01.epilogue.b0006": 48,
+      "v01.epilogue.b0007": 49,
+      "v01.epilogue.b0008": 50,
+      "v01.epilogue.end": 51,
+      "v01.end": 52
+    }
+  },
+  "blocks": {
+    "v01.prologue.b0001": {
+      "id": "v01.prologue.b0001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 1,
+      "kind": "paragraph",
+      "text": "新建的校门在九月的阳光下泛着银灰色的光泽。林澈提着行李箱站在门口，仰头看着门楣上「灰塔学院」四个字。他并不知道，这座以灰色花岗岩命名的学校，即将改变他的一切认知。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.prologue.b0002": {
+      "id": "v01.prologue.b0002",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 2,
+      "kind": "paragraph",
+      "text": "灰塔学院是一所封闭式寄宿学校，以严格的班级竞争制度闻名。学生入学后按综合成绩分班，班级点数决定生活待遇和资源分配。在这个制度下，没有人能独善其身。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.prologue.b0003": {
+      "id": "v01.prologue.b0003",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 3,
+      "kind": "paragraph",
+      "text": "他正打量着四周，忽然听见身后传来脚步声。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.prologue.b0004": {
+      "id": "v01.prologue.b0004",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 4,
+      "kind": "dialogue",
+      "text": "「你也是新生？」一个清冷的声音从背后传来。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.prologue.b0005": {
+      "id": "v01.prologue.b0005",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 5,
+      "kind": "paragraph",
+      "text": "林澈转过身。面前站着一个扎着低马尾的女生，校服整洁，眼神平静。她手里拿着一本棕色笔记本，封面没有任何字样。她的目光落在他胸口的校徽上——一年D班。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.prologue.b0006": {
+      "id": "v01.prologue.b0006",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 6,
+      "kind": "dialogue",
+      "text": "「嗯，一年D班。」林澈说。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.prologue.b0007": {
+      "id": "v01.prologue.b0007",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 7,
+      "kind": "paragraph",
+      "text": "女生点了点头，没有多说什么，径直走向校门。林澈注意到她的校徽上同样写着「一年D班」。他还不知道她的名字——后来他才知道，她叫许映白。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0001": {
+      "id": "v01.c01.b0001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 1,
+      "kind": "paragraph",
+      "text": "上午的教室有些嘈杂。新生们还没完全熟悉彼此，低声交谈声和翻书声交织在一起。林澈坐在靠窗的位置，目光扫过教室里的每一张脸。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0002": {
+      "id": "v01.c01.b0002",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 2,
+      "kind": "dialogue",
+      "text": "「听说今天要公布班级点数了，你紧张吗？」坐在斜前方的男生探过头来，圆脸上带着藏不住的好奇。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0003": {
+      "id": "v01.c01.b0003",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 3,
+      "kind": "dialogue",
+      "text": "坐在旁边的许映白头也不抬，只是冷淡地回了一句：「紧张也没用。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0004": {
+      "id": "v01.c01.b0004",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 4,
+      "kind": "paragraph",
+      "text": "讲台前，班主任正在整理手上的文件夹。林澈注意到教室前方贴着一张白色公告栏，上面写着「班级点数制度说明」。他开始逐条阅读。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0005": {
+      "id": "v01.c01.b0005",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 5,
+      "kind": "dialogue",
+      "text": "「从今天起，每班的初始点数为一百分。」班主任抬起头，目光扫过整个教室，「一个月后，根据点数排名调整下个月的待遇。包括餐饮标准、商店开放权限和自习室使用资格。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0006": {
+      "id": "v01.c01.b0006",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 6,
+      "kind": "paragraph",
+      "text": "教室里一片哗然。有人开始在笔记本上奋笔疾书，有人低声讨论方案。林澈在手边的笔记本上写下：「D班初始点数：100」。然后又加了一句：「规则尚不完整——点数增减方式未公布。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0007": {
+      "id": "v01.c01.b0007",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 7,
+      "kind": "dialogue",
+      "text": "「点数怎么增减？规则有说明吗？」那个圆脸男生——周弥——举手问道。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0008": {
+      "id": "v01.c01.b0008",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 8,
+      "kind": "dialogue",
+      "text": "「细则会在后续通知中逐步公布。」班主任面无表情地合上文件夹，语气里没有任何商量余地。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c01.b0009": {
+      "id": "v01.c01.b0009",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 9,
+      "kind": "paragraph",
+      "text": "教室后排，许映白正在笔记本上快速记录着什么。林澈收回视线时，注意到教室门口站着一个挂着学生会胸牌的女生。她静立了片刻，目光扫过教室内的每一个人，然后转身离开。林澈后来才知道，她叫白川遥，是学生会的记录员。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0001": {
+      "id": "v01.c02.b0001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 1,
+      "kind": "paragraph",
+      "text": "第二天下午，林澈被通知参加跨班小组会议。教室里的座位被重新排列，四个班级的学生混坐在一起。空气中有种微妙的紧张感。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0002": {
+      "id": "v01.c02.b0002",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 2,
+      "kind": "dialogue",
+      "text": "「你就是D班的林澈？」一个戴眼镜的男生主动伸出手，「我叫沈砚，B班的。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0003": {
+      "id": "v01.c02.b0003",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 3,
+      "kind": "paragraph",
+      "text": "林澈握了握他的手。沈砚看起来温和有礼，但眼神深处似乎藏着什么。会议内容是关于即将到来的特别考试，但具体的规则仍然模糊不清。老师只说「各组自由讨论，准备迎接评估」，没有给出任何评分标准。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0004": {
+      "id": "v01.c02.b0004",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 4,
+      "kind": "dialogue",
+      "text": "「你们有没有觉得，学校的规则总是只公布一半？」沈砚低声说，声音几乎只有林澈能听见。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0005": {
+      "id": "v01.c02.b0005",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 5,
+      "kind": "paragraph",
+      "text": "林澈没有立刻回答。他的目光落在对方推过来的一张纸条上——那是一份手写的名单，列着几个名字，但没有标注用途。纸条最上方写着「未寄出的名单」几个字，字体很小，像是匆忙写下的。墨水有些晕染，纸张边缘起了毛边。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0006": {
+      "id": "v01.c02.b0006",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 6,
+      "kind": "dialogue",
+      "text": "「这是什么？」林澈问。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0007": {
+      "id": "v01.c02.b0007",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 7,
+      "kind": "dialogue",
+      "text": "沈砚微微一笑，收回了纸条：「以后你会知道的。现在还不是时候。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0008": {
+      "id": "v01.c02.b0008",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 8,
+      "kind": "separator",
+      "text": "---",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c02.b0009": {
+      "id": "v01.c02.b0009",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 9,
+      "kind": "paragraph",
+      "text": "会议结束后，林澈在走廊上碰到了许映白。她想说什么，却只是摇了摇头，径直走开了。墙上的公告栏贴着一份新的通知：本周五将举行第一次特别考试——「白卡测试」。落款是学生会。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0001": {
+      "id": "v01.c03.b0001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 1,
+      "kind": "paragraph",
+      "text": "周五的特别考试在体育馆内进行。规则出乎意料的简单：每组需要在一小时内完成一份综合试卷，全组平均分决定排名。但林澈知道，简单规则背后往往藏着更复杂的东西。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0002": {
+      "id": "v01.c03.b0002",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 2,
+      "kind": "dialogue",
+      "text": "「听好了，」考官站在台上宣布，「第一名班级将获得班级点数三百点奖励，个人排名前三将获得个人点数。同时——」他停顿了一下，「最后一名将扣除班级点数二百点。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0003": {
+      "id": "v01.c03.b0003",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 3,
+      "kind": "paragraph",
+      "text": "消息一出，整个体育馆都安静了片刻。然后爆发出压低的讨论声。林澈快速心算：D班目前100点，如果能拿到第一名，就变成400点；但如果落到最后，反而会变成负数。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0004": {
+      "id": "v01.c03.b0004",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 4,
+      "kind": "dialogue",
+      "text": "「别太乐观，」沈砚在他身后低声说，「规则不会这么简单。你注意到没有——个人点数的规则一个字都没提。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0005": {
+      "id": "v01.c03.b0005",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 5,
+      "kind": "paragraph",
+      "text": "考试开始了。林澈发现试卷比预想中难得多，尤其是最后几道附加题，涉及大量他还没学过的内容。他能听到周边的呼吸声和翻页声，偶尔有人低声叹气。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0006": {
+      "id": "v01.c03.b0006",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 6,
+      "kind": "dialogue",
+      "text": "「最后一题有人做出来了吗？」周弥在休息间隙凑过来问，圆脸上写满了焦虑。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0007": {
+      "id": "v01.c03.b0007",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 7,
+      "kind": "paragraph",
+      "text": "林澈摇了摇头。他注意到许映白在角落里安静地写着什么，表情平静得不像是在参加考试。成绩公布时，D班的平均分排在了中游。班级点数增加了五十点，变成了150。林澈个人排名意外进入前三，获得个人点数二十点。而许映白的个人点数——公告只说她有变动，但没有公布具体数值。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.c03.b0008": {
+      "id": "v01.c03.b0008",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 8,
+      "kind": "paragraph",
+      "text": "林澈在笔记本上又记了一笔：「D班点数：100 + 50 = 150。许映白——点数有变化，数值不明。」他看了一眼许映白的背影，忽然觉得这个同班同学远比他想象中复杂。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0001": {
+      "id": "v01.epilogue.b0001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 1,
+      "kind": "paragraph",
+      "text": "白卡测试结束后的一周，林澈终于从沈砚那里得到了解释。他们约在空教室见面，夕阳从窗外斜射进来，在地板上拉出长长的影子。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0002": {
+      "id": "v01.epilogue.b0002",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 2,
+      "kind": "dialogue",
+      "text": "「那张名单——未寄出的名单，」沈砚靠在窗边，声音低沉，「是我记录的暗中分组。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0003": {
+      "id": "v01.epilogue.b0003",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 3,
+      "kind": "paragraph",
+      "text": "林澈愣住了。窗外有鸟飞过，但他完全没注意到。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0004": {
+      "id": "v01.epilogue.b0004",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 4,
+      "kind": "dialogue",
+      "text": "「白卡测试的分组不是随机的，」沈砚继续说，「学校早就定好了每一组的构成。我通过一些渠道拿到了原始分组方案，但那份方案和实际公布的不完全一致——所以我记下了差异，做了一份对照名单。本来想匿名寄给学生会，但后来……」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0005": {
+      "id": "v01.epilogue.b0005",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 5,
+      "kind": "paragraph",
+      "text": "他没有继续说下去。阳光照在他的侧脸上，林澈第一次觉得这个B班的同学远比他表现出来得复杂。那张看似不起眼的纸条，原来藏着学校分组制度的真相。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0006": {
+      "id": "v01.epilogue.b0006",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 6,
+      "kind": "dialogue",
+      "text": "「那你为什么没有寄出去？」林澈问。",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0007": {
+      "id": "v01.epilogue.b0007",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 7,
+      "kind": "dialogue",
+      "text": "「因为发现的时候，已经来不及了。」沈砚苦笑了一下，「而且——有些事情，也许不让所有人知道反而更好。至少目前是这样。」",
+      "source_markdown": "parsed/volumes/v01.md"
+    },
+    "v01.epilogue.b0008": {
+      "id": "v01.epilogue.b0008",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 8,
+      "kind": "paragraph",
+      "text": "林澈走出空教室时，走廊尽头的公告栏上已经贴出了下个月的待遇调整通知。灰塔学院的竞争，才刚刚开始。",
+      "source_markdown": "parsed/volumes/v01.md"
+    }
+  },
+  "scenes": {
+    "v01.prologue.s001": {
+      "id": "v01.prologue.s001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.prologue",
+      "order": 1,
+      "title": "校门前的相遇",
+      "start_block": "v01.prologue.b0001",
+      "end_block": "v01.prologue.b0007",
+      "pov": null,
+      "location_entity_id": null,
+      "status": "parsed"
+    },
+    "v01.c01.s001": {
+      "id": "v01.c01.s001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "order": 1,
+      "title": "点数公告",
+      "start_block": "v01.c01.b0001",
+      "end_block": "v01.c01.b0009",
+      "pov": null,
+      "location_entity_id": null,
+      "status": "parsed"
+    },
+    "v01.c02.s001": {
+      "id": "v01.c02.s001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "order": 1,
+      "title": "未寄出的名单",
+      "start_block": "v01.c02.b0001",
+      "end_block": "v01.c02.b0009",
+      "pov": null,
+      "location_entity_id": null,
+      "status": "parsed"
+    },
+    "v01.c03.s001": {
+      "id": "v01.c03.s001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "order": 1,
+      "title": "白卡测试",
+      "start_block": "v01.c03.b0001",
+      "end_block": "v01.c03.b0008",
+      "pov": null,
+      "location_entity_id": null,
+      "status": "parsed"
+    },
+    "v01.epilogue.s001": {
+      "id": "v01.epilogue.s001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.epilogue",
+      "order": 1,
+      "title": "真相",
+      "start_block": "v01.epilogue.b0001",
+      "end_block": "v01.epilogue.b0008",
+      "pov": null,
+      "location_entity_id": null,
+      "status": "parsed"
+    }
+  },
+  "assets": {
+    "v01_img_003": {
+      "id": "v01_img_003",
+      "type": "image",
+      "path": "assets/images/v01_img_003.svg",
+      "alt": "灰塔学院校门远景",
+      "source_volume_id": "v01"
+    },
+    "v01_img_001": {
+      "id": "v01_img_001",
+      "type": "image",
+      "path": "assets/images/v01_img_001.svg",
+      "alt": "林澈站在校门前的背影",
+      "source_volume_id": "v01"
+    },
+    "v01_img_002": {
+      "id": "v01_img_002",
+      "type": "image",
+      "path": "assets/images/v01_img_002.svg",
+      "alt": "D班教室全景",
+      "source_volume_id": "v01"
+    },
+    "v01_img_005": {
+      "id": "v01_img_005",
+      "type": "image",
+      "path": "assets/images/v01_img_005.svg",
+      "alt": "跨班会议中林澈与沈砚的合照",
+      "source_volume_id": "v01"
+    },
+    "v01_img_004": {
+      "id": "v01_img_004",
+      "type": "image",
+      "path": "assets/images/v01_img_004.svg",
+      "alt": "体育馆考场布置",
+      "source_volume_id": "v01"
+    }
+  },
+  "asset_anchors": {
+    "asset_anchor_001": {
+      "id": "asset_anchor_001",
+      "asset_id": "v01_img_003",
+      "anchor_type": "after_block",
+      "block_id": "v01.prologue.b0002"
+    },
+    "asset_anchor_002": {
+      "id": "asset_anchor_002",
+      "asset_id": "v01_img_001",
+      "anchor_type": "after_block",
+      "block_id": "v01.prologue.b0007"
+    },
+    "asset_anchor_003": {
+      "id": "asset_anchor_003",
+      "asset_id": "v01_img_002",
+      "anchor_type": "after_block",
+      "block_id": "v01.c01.b0009"
+    },
+    "asset_anchor_004": {
+      "id": "asset_anchor_004",
+      "asset_id": "v01_img_005",
+      "anchor_type": "after_block",
+      "block_id": "v01.c02.b0002"
+    },
+    "asset_anchor_005": {
+      "id": "asset_anchor_005",
+      "asset_id": "v01_img_004",
+      "anchor_type": "after_block",
+      "block_id": "v01.c03.b0001"
+    }
+  },
+  "alignments": {
+    "v01.c01.a001": {
+      "id": "v01.c01.a001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "zh_block_ids": [
+        "v01.c01.b0002"
+      ],
+      "ja_refs": [
+        {
+          "id": "v01.c01.a001.ja01",
+          "order": 1,
+          "text": "「今日、クラスポイントが発表されるって聞いたけど、緊張してる？」斜め前の男子が、丸い顔に隠しきれない好奇心を浮かべて顔を覗かせた。"
+        }
+      ],
+      "confidence": 0.95,
+      "status": "reviewed"
+    },
+    "v01.c01.a002": {
+      "id": "v01.c01.a002",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c01",
+      "zh_block_ids": [
+        "v01.c01.b0005"
+      ],
+      "ja_refs": [
+        {
+          "id": "v01.c01.a002.ja01",
+          "order": 1,
+          "text": "「今日から、各クラスの初期ポイントは百点とする。」担任は顔を上げ、教室全体を見回した。"
+        },
+        {
+          "id": "v01.c01.a002.ja02",
+          "order": 2,
+          "text": "「一か月後、ポイント順位に応じて翌月の待遇を調整する。食事の基準、購買の利用権限、自習室の使用資格を含めてだ。」"
+        }
+      ],
+      "confidence": 0.9,
+      "status": "reviewed"
+    },
+    "v01.c02.a001": {
+      "id": "v01.c02.a001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c02",
+      "zh_block_ids": [
+        "v01.c02.b0001",
+        "v01.c02.b0002"
+      ],
+      "ja_refs": [
+        {
+          "id": "v01.c02.a001.ja01",
+          "order": 1,
+          "text": "翌日の午後、林澈は他クラス合同のグループ会議に呼ばれた。眼鏡の男子が手を差し出した——「君がD組の林澈だね？僕は沈硯、B組だ。」"
+        }
+      ],
+      "confidence": 0.85,
+      "status": "reviewed"
+    },
+    "v01.c03.a001": {
+      "id": "v01.c03.a001",
+      "series_id": "gray_tower",
+      "volume_id": "v01",
+      "chapter_id": "v01.c03",
+      "zh_block_ids": [
+        "v01.c03.b0007"
+      ],
+      "ja_refs": [
+        {
+          "id": "v01.c03.a001.ja01",
+          "order": 1,
+          "text": "林澈は首を横に振った。成績発表で、D組の平均点は中位だった。"
+        }
+      ],
+      "confidence": 0.6,
+      "status": "pending_review"
+    }
+  },
+  "accepted": {
+    "entities": {
+      "entity_linche": {
+        "id": "entity_linche",
+        "series_id": "gray_tower",
+        "type": "character",
+        "name": "林澈",
+        "aliases": [],
+        "first_seen": "v01.prologue.b0001",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.prologue.b0001",
+          "end_block": "v01.prologue.b0001"
+        },
+        "created_change_id": "change_000001",
+        "updated_change_ids": []
+      },
+      "entity_d_class": {
+        "id": "entity_d_class",
+        "series_id": "gray_tower",
+        "type": "group",
+        "name": "一年D班",
+        "aliases": [
+          "D班"
+        ],
+        "first_seen": "v01.prologue.b0005",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.prologue.b0005",
+          "end_block": "v01.prologue.b0005"
+        },
+        "created_change_id": "change_000002",
+        "updated_change_ids": []
+      },
+      "entity_gray_tower": {
+        "id": "entity_gray_tower",
+        "series_id": "gray_tower",
+        "type": "organization",
+        "name": "灰塔学院",
+        "aliases": [],
+        "first_seen": "v01.prologue.b0001",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.prologue.b0001",
+          "end_block": "v01.prologue.b0001"
+        },
+        "created_change_id": "change_000003",
+        "updated_change_ids": []
+      },
+      "entity_xu_yingbai": {
+        "id": "entity_xu_yingbai",
+        "series_id": "gray_tower",
+        "type": "character",
+        "name": "许映白",
+        "aliases": [
+          "扎低马尾的女生"
+        ],
+        "first_seen": "v01.prologue.b0005",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.prologue.b0005",
+          "end_block": "v01.prologue.b0007"
+        },
+        "created_change_id": "change_000004",
+        "updated_change_ids": []
+      },
+      "entity_baichuan_yao": {
+        "id": "entity_baichuan_yao",
+        "series_id": "gray_tower",
+        "type": "character",
+        "name": "白川遥",
+        "aliases": [],
+        "first_seen": "v01.c01.b0009",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0009",
+          "end_block": "v01.c01.b0009"
+        },
+        "created_change_id": "change_000005",
+        "updated_change_ids": []
+      },
+      "entity_shenyan": {
+        "id": "entity_shenyan",
+        "series_id": "gray_tower",
+        "type": "character",
+        "name": "沈砚",
+        "aliases": [],
+        "first_seen": "v01.c02.b0002",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c02.b0002",
+          "end_block": "v01.c02.b0002"
+        },
+        "created_change_id": "change_000006",
+        "updated_change_ids": []
+      },
+      "entity_b_class": {
+        "id": "entity_b_class",
+        "series_id": "gray_tower",
+        "type": "group",
+        "name": "一年B班",
+        "aliases": [
+          "B班"
+        ],
+        "first_seen": "v01.c02.b0002",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c02.b0002",
+          "end_block": "v01.c02.b0002"
+        },
+        "created_change_id": "change_000007",
+        "updated_change_ids": []
+      },
+      "entity_student_council": {
+        "id": "entity_student_council",
+        "series_id": "gray_tower",
+        "type": "organization",
+        "name": "学生会",
+        "aliases": [],
+        "first_seen": "v01.c01.b0009",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0009",
+          "end_block": "v01.c01.b0009"
+        },
+        "created_change_id": "change_000008",
+        "updated_change_ids": []
+      },
+      "term_class_points": {
+        "id": "term_class_points",
+        "series_id": "gray_tower",
+        "type": "term",
+        "name": "班级点数",
+        "aliases": [],
+        "first_seen": "v01.c01.b0005",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0005",
+          "end_block": "v01.c01.b0005"
+        },
+        "created_change_id": "change_000009",
+        "updated_change_ids": []
+      },
+      "term_white_card_test": {
+        "id": "term_white_card_test",
+        "series_id": "gray_tower",
+        "type": "term",
+        "name": "白卡测试",
+        "aliases": [],
+        "first_seen": "v01.c02.b0009",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c02.b0009",
+          "end_block": "v01.c02.b0009"
+        },
+        "created_change_id": "change_000010",
+        "updated_change_ids": []
+      },
+      "term_unsent_list": {
+        "id": "term_unsent_list",
+        "series_id": "gray_tower",
+        "type": "event_concept",
+        "name": "未寄出的名单",
+        "aliases": [],
+        "first_seen": "v01.c02.b0005",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c02.b0005",
+          "end_block": "v01.c02.b0005"
+        },
+        "created_change_id": "change_000011",
+        "updated_change_ids": []
+      },
+      "entity_zhoumi": {
+        "id": "entity_zhoumi",
+        "series_id": "gray_tower",
+        "type": "character",
+        "name": "周弥",
+        "aliases": [
+          "圆脸男生"
+        ],
+        "first_seen": "v01.c01.b0002",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0002",
+          "end_block": "v01.c01.b0007"
+        },
+        "created_change_id": "change_000012",
+        "updated_change_ids": []
+      }
+    },
+    "facts": {
+      "fact_linche_class_v01": {
+        "id": "fact_linche_class_v01",
+        "series_id": "gray_tower",
+        "subject_id": "entity_linche",
+        "predicate": "class",
+        "value": "D班",
+        "value_type": "entity",
+        "value_entity_id": "entity_d_class",
+        "valid_from": "v01.prologue.b0006",
+        "valid_until": null,
+        "visible_from": "v01.prologue.b0006",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.prologue.b0006",
+          "end_block": "v01.prologue.b0006"
+        },
+        "created_change_id": "change_000013",
+        "updated_change_ids": []
+      },
+      "fact_xu_yingbai_class_v01": {
+        "id": "fact_xu_yingbai_class_v01",
+        "series_id": "gray_tower",
+        "subject_id": "entity_xu_yingbai",
+        "predicate": "class",
+        "value": "D班",
+        "value_type": "entity",
+        "value_entity_id": "entity_d_class",
+        "valid_from": "v01.c01.b0003",
+        "valid_until": null,
+        "visible_from": "v01.c01.b0003",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0003",
+          "end_block": "v01.c01.b0003"
+        },
+        "created_change_id": "change_000014",
+        "updated_change_ids": []
+      },
+      "fact_shenyan_class_v01": {
+        "id": "fact_shenyan_class_v01",
+        "series_id": "gray_tower",
+        "subject_id": "entity_shenyan",
+        "predicate": "class",
+        "value": "B班",
+        "value_type": "entity",
+        "value_entity_id": "entity_b_class",
+        "valid_from": "v01.c02.b0002",
+        "valid_until": null,
+        "visible_from": "v01.c02.b0002",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c02.b0002",
+          "end_block": "v01.c02.b0002"
+        },
+        "created_change_id": "change_000015",
+        "updated_change_ids": []
+      },
+      "fact_baichuan_role_v01": {
+        "id": "fact_baichuan_role_v01",
+        "series_id": "gray_tower",
+        "subject_id": "entity_baichuan_yao",
+        "predicate": "role",
+        "value": "学生会记录员",
+        "value_type": "string",
+        "valid_from": "v01.c01.b0009",
+        "valid_until": null,
+        "visible_from": "v01.c01.b0009",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0009",
+          "end_block": "v01.c01.b0009"
+        },
+        "created_change_id": "change_000016",
+        "updated_change_ids": []
+      }
+    },
+    "events": {
+      "event_points_announced": {
+        "id": "event_points_announced",
+        "series_id": "gray_tower",
+        "type": "rule_announced",
+        "title": "班级点数制度公布",
+        "summary": "班主任向D班公布初始班级点数与待遇规则。",
+        "summary_source": "ai_draft",
+        "position": "v01.c01.b0005",
+        "participants": [
+          "entity_linche",
+          "entity_d_class"
+        ],
+        "related_entities": [
+          "entity_student_council"
+        ],
+        "importance": "major",
+        "visible_from": "v01.c01.b0005",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0004",
+          "end_block": "v01.c01.b0008"
+        },
+        "created_change_id": "change_000017",
+        "updated_change_ids": []
+      },
+      "event_white_card_test": {
+        "id": "event_white_card_test",
+        "series_id": "gray_tower",
+        "type": "special_exam",
+        "title": "白卡测试举行",
+        "summary": "四班学生参加白卡测试，D班平均分居中。",
+        "summary_source": "ai_draft",
+        "position": "v01.c03.b0002",
+        "participants": [
+          "entity_linche",
+          "entity_xu_yingbai",
+          "entity_zhoumi",
+          "entity_shenyan"
+        ],
+        "related_entities": [
+          "entity_d_class"
+        ],
+        "importance": "major",
+        "visible_from": "v01.c03.b0002",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c03.b0001",
+          "end_block": "v01.c03.b0008"
+        },
+        "created_change_id": "change_000018",
+        "updated_change_ids": []
+      },
+      "event_unsent_list_revealed": {
+        "id": "event_unsent_list_revealed",
+        "series_id": "gray_tower",
+        "type": "reveal",
+        "title": "未寄出名单真相揭示",
+        "summary": "沈砚揭示未寄出的名单实为暗中分组的对照记录。",
+        "summary_source": "ai_draft",
+        "position": "v01.epilogue.b0002",
+        "participants": [
+          "entity_shenyan",
+          "entity_linche"
+        ],
+        "related_entities": [
+          "entity_student_council"
+        ],
+        "importance": "critical",
+        "visible_from": "v01.epilogue.b0002",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c02.b0005",
+          "end_block": "v01.epilogue.b0004"
+        },
+        "created_change_id": "change_000019",
+        "updated_change_ids": []
+      }
+    },
+    "relation_changes": {
+      "relation_linche_shenyan_v01_c03": {
+        "id": "relation_linche_shenyan_v01_c03",
+        "series_id": "gray_tower",
+        "entities": [
+          "entity_linche",
+          "entity_shenyan"
+        ],
+        "before": "C02 初识，互相试探。",
+        "after": "白卡测试中沈砚提醒林澈，关系略有靠近但仍存戒备。",
+        "event_id": "event_white_card_test",
+        "valid_from": "v01.c03.b0004",
+        "visible_from": "v01.c03.b0004",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c02.b0002",
+          "end_block": "v01.c03.b0004"
+        },
+        "created_change_id": "change_000020",
+        "updated_change_ids": []
+      },
+      "relation_linche_shenyan_v01_epilogue": {
+        "id": "relation_linche_shenyan_v01_epilogue",
+        "series_id": "gray_tower",
+        "entities": [
+          "entity_linche",
+          "entity_shenyan"
+        ],
+        "before": "戒备但好奇。",
+        "after": "沈砚坦白名单真相后，林澈对其复杂动机有了新认识。",
+        "event_id": "event_unsent_list_revealed",
+        "valid_from": "v01.epilogue.b0004",
+        "visible_from": "v01.epilogue.b0004",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.epilogue.b0002",
+          "end_block": "v01.epilogue.b0004"
+        },
+        "created_change_id": "change_000021",
+        "updated_change_ids": []
+      }
+    },
+    "metrics": {
+      "metric_d_class_points": {
+        "id": "metric_d_class_points",
+        "series_id": "gray_tower",
+        "subject_id": "entity_d_class",
+        "name": "D班班级点数",
+        "metric_type": "class_points",
+        "unit": "points",
+        "value_type": "integer",
+        "visible_from": "v01.c01.b0006",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0006",
+          "end_block": "v01.c01.b0006"
+        },
+        "created_change_id": "change_000025",
+        "updated_change_ids": []
+      },
+      "metric_linche_personal_points": {
+        "id": "metric_linche_personal_points",
+        "series_id": "gray_tower",
+        "subject_id": "entity_linche",
+        "name": "林澈个人点数",
+        "metric_type": "personal_points",
+        "unit": "points",
+        "value_type": "integer",
+        "visible_from": "v01.c03.b0007",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c03.b0007",
+          "end_block": "v01.c03.b0007"
+        },
+        "created_change_id": "change_000028",
+        "updated_change_ids": []
+      }
+    },
+    "metric_changes": {
+      "metric_change_d_class_points_init": {
+        "id": "metric_change_d_class_points_init",
+        "series_id": "gray_tower",
+        "metric_id": "metric_d_class_points",
+        "old_value": 0,
+        "new_value": 100,
+        "delta": 100,
+        "reason": "公布初始班级点数。",
+        "reason_event_id": "event_points_announced",
+        "valid_from": "v01.c01.b0006",
+        "visible_from": "v01.c01.b0006",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0006",
+          "end_block": "v01.c01.b0006"
+        },
+        "created_change_id": "change_000026",
+        "updated_change_ids": []
+      },
+      "metric_change_d_class_points_test": {
+        "id": "metric_change_d_class_points_test",
+        "series_id": "gray_tower",
+        "metric_id": "metric_d_class_points",
+        "old_value": 100,
+        "new_value": 150,
+        "delta": 50,
+        "reason": "白卡测试后班级点数增加五十点。",
+        "reason_event_id": "event_white_card_test",
+        "valid_from": "v01.c03.b0007",
+        "visible_from": "v01.c03.b0007",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c03.b0007",
+          "end_block": "v01.c03.b0008"
+        },
+        "created_change_id": "change_000027",
+        "updated_change_ids": []
+      },
+      "metric_change_linche_personal_points_test": {
+        "id": "metric_change_linche_personal_points_test",
+        "series_id": "gray_tower",
+        "metric_id": "metric_linche_personal_points",
+        "old_value": 0,
+        "new_value": 20,
+        "delta": 20,
+        "reason": "白卡测试个人排名前三获得个人点数二十点。",
+        "reason_event_id": "event_white_card_test",
+        "valid_from": "v01.c03.b0007",
+        "visible_from": "v01.c03.b0007",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c03.b0007",
+          "end_block": "v01.c03.b0007"
+        },
+        "created_change_id": "change_000029",
+        "updated_change_ids": []
+      }
+    },
+    "character_cards": {
+      "card_xu_yingbai_v01_end": {
+        "id": "card_xu_yingbai_v01_end",
+        "series_id": "gray_tower",
+        "entity_id": "entity_xu_yingbai",
+        "version_position": "v01.end",
+        "short_summary": "成绩优秀、社交冷淡的D班学生，个人点数有未公开变动。",
+        "reader_memory": "读者此时应记得她与D班制度、白卡测试的关系，以及其点数变化尚不明朗。",
+        "source_refs": [
+          "fact_xu_yingbai_class_v01",
+          "event_white_card_test"
+        ],
+        "visible_from": "v01.end",
+        "summary_source": "ai_draft",
+        "status": "accepted",
+        "created_change_id": "change_000031",
+        "updated_change_ids": []
+      }
+    },
+    "term_cards": {
+      "term_card_class_points_v01": {
+        "id": "term_card_class_points_v01",
+        "series_id": "gray_tower",
+        "term_entity_id": "term_class_points",
+        "title": "班级点数",
+        "summary": "决定班级待遇与资源分配的核心数值，初始一百分。",
+        "summary_source": "ai_draft",
+        "visible_from": "v01.c01.b0006",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0005",
+          "end_block": "v01.c01.b0006"
+        },
+        "created_change_id": "change_000030",
+        "updated_change_ids": []
+      }
+    },
+    "speaker_labels": {
+      "speaker_v01_c01_b0002_001": {
+        "id": "speaker_v01_c01_b0002_001",
+        "series_id": "gray_tower",
+        "block_id": "v01.c01.b0002",
+        "speaker_type": "entity",
+        "speaker_entity_id": "entity_zhoumi",
+        "display_name": "圆脸男生",
+        "confidence": 0.55,
+        "visible_from": "v01.c01.b0002",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0002",
+          "end_block": "v01.c01.b0002"
+        },
+        "created_change_id": "change_000022",
+        "updated_change_ids": []
+      },
+      "speaker_v01_c01_b0003_001": {
+        "id": "speaker_v01_c01_b0003_001",
+        "series_id": "gray_tower",
+        "block_id": "v01.c01.b0003",
+        "speaker_type": "entity",
+        "speaker_entity_id": "entity_xu_yingbai",
+        "display_name": "许映白",
+        "confidence": 0.9,
+        "visible_from": "v01.c01.b0003",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c01.b0003",
+          "end_block": "v01.c01.b0003"
+        },
+        "created_change_id": "change_000023",
+        "updated_change_ids": []
+      },
+      "speaker_v01_c03_b0004_001": {
+        "id": "speaker_v01_c03_b0004_001",
+        "series_id": "gray_tower",
+        "block_id": "v01.c03.b0004",
+        "speaker_type": "entity",
+        "speaker_entity_id": "entity_shenyan",
+        "display_name": "沈砚",
+        "confidence": 0.85,
+        "visible_from": "v01.c03.b0004",
+        "status": "accepted",
+        "source_span": {
+          "start_block": "v01.c03.b0004",
+          "end_block": "v01.c03.b0004"
+        },
+        "created_change_id": "change_000024",
+        "updated_change_ids": []
+      }
+    },
+    "asset_subjects": {
+      "asset_subject_img001_linche": {
+        "id": "asset_subject_img001_linche",
+        "series_id": "gray_tower",
+        "asset_id": "v01_img_001",
+        "asset_anchor_id": "asset_anchor_002",
+        "subject_type": "entity",
+        "entity_id": "entity_linche",
+        "role": "depicted",
+        "confidence": 1,
+        "visible_from": "v01.prologue.b0007",
+        "source": "manual",
+        "status": "accepted",
+        "created_change_id": "change_000032",
+        "updated_change_ids": []
+      },
+      "asset_subject_img005_linche": {
+        "id": "asset_subject_img005_linche",
+        "series_id": "gray_tower",
+        "asset_id": "v01_img_005",
+        "asset_anchor_id": "asset_anchor_004",
+        "subject_type": "entity",
+        "entity_id": "entity_linche",
+        "role": "depicted",
+        "confidence": 1,
+        "visible_from": "v01.c02.b0002",
+        "source": "manual",
+        "status": "accepted",
+        "created_change_id": "change_000033",
+        "updated_change_ids": []
+      },
+      "asset_subject_img005_shenyan": {
+        "id": "asset_subject_img005_shenyan",
+        "series_id": "gray_tower",
+        "asset_id": "v01_img_005",
+        "asset_anchor_id": "asset_anchor_004",
+        "subject_type": "entity",
+        "entity_id": "entity_shenyan",
+        "role": "depicted",
+        "confidence": 1,
+        "visible_from": "v01.c02.b0002",
+        "source": "manual",
+        "status": "accepted",
+        "created_change_id": "change_000034",
+        "updated_change_ids": []
+      }
+    }
+  },
+  "index": {
+    "by_block": {
+      "v01.prologue.b0001": {
+        "scene_id": "v01.prologue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.prologue.b0002": {
+        "scene_id": "v01.prologue.s001",
+        "asset_ids": [
+          "v01_img_003"
+        ],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.prologue.b0003": {
+        "scene_id": "v01.prologue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.prologue.b0004": {
+        "scene_id": "v01.prologue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.prologue.b0005": {
+        "scene_id": "v01.prologue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.prologue.b0006": {
+        "scene_id": "v01.prologue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.prologue.b0007": {
+        "scene_id": "v01.prologue.s001",
+        "asset_ids": [
+          "v01_img_001"
+        ],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c01.b0001": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c01.b0002": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [
+          "v01.c01.a001"
+        ],
+        "speaker_label_ids": [
+          "speaker_v01_c01_b0002_001"
+        ]
+      },
+      "v01.c01.b0003": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": [
+          "speaker_v01_c01_b0003_001"
+        ]
+      },
+      "v01.c01.b0004": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c01.b0005": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [
+          "v01.c01.a002"
+        ],
+        "speaker_label_ids": []
+      },
+      "v01.c01.b0006": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c01.b0007": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c01.b0008": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c01.b0009": {
+        "scene_id": "v01.c01.s001",
+        "asset_ids": [
+          "v01_img_002"
+        ],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0001": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [
+          "v01.c02.a001"
+        ],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0002": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [
+          "v01_img_005"
+        ],
+        "alignment_ids": [
+          "v01.c02.a001"
+        ],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0003": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0004": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0005": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0006": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0007": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0008": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c02.b0009": {
+        "scene_id": "v01.c02.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c03.b0001": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [
+          "v01_img_004"
+        ],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c03.b0002": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c03.b0003": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c03.b0004": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": [
+          "speaker_v01_c03_b0004_001"
+        ]
+      },
+      "v01.c03.b0005": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c03.b0006": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.c03.b0007": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [],
+        "alignment_ids": [
+          "v01.c03.a001"
+        ],
+        "speaker_label_ids": []
+      },
+      "v01.c03.b0008": {
+        "scene_id": "v01.c03.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0001": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0002": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0003": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0004": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0005": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0006": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0007": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      },
+      "v01.epilogue.b0008": {
+        "scene_id": "v01.epilogue.s001",
+        "asset_ids": [],
+        "alignment_ids": [],
+        "speaker_label_ids": []
+      }
+    },
+    "by_scene": {
+      "v01.prologue.s001": [
+        "v01.prologue.b0001",
+        "v01.prologue.b0002",
+        "v01.prologue.b0003",
+        "v01.prologue.b0004",
+        "v01.prologue.b0005",
+        "v01.prologue.b0006",
+        "v01.prologue.b0007"
+      ],
+      "v01.c01.s001": [
+        "v01.c01.b0001",
+        "v01.c01.b0002",
+        "v01.c01.b0003",
+        "v01.c01.b0004",
+        "v01.c01.b0005",
+        "v01.c01.b0006",
+        "v01.c01.b0007",
+        "v01.c01.b0008",
+        "v01.c01.b0009"
+      ],
+      "v01.c02.s001": [
+        "v01.c02.b0001",
+        "v01.c02.b0002",
+        "v01.c02.b0003",
+        "v01.c02.b0004",
+        "v01.c02.b0005",
+        "v01.c02.b0006",
+        "v01.c02.b0007",
+        "v01.c02.b0008",
+        "v01.c02.b0009"
+      ],
+      "v01.c03.s001": [
+        "v01.c03.b0001",
+        "v01.c03.b0002",
+        "v01.c03.b0003",
+        "v01.c03.b0004",
+        "v01.c03.b0005",
+        "v01.c03.b0006",
+        "v01.c03.b0007",
+        "v01.c03.b0008"
+      ],
+      "v01.epilogue.s001": [
+        "v01.epilogue.b0001",
+        "v01.epilogue.b0002",
+        "v01.epilogue.b0003",
+        "v01.epilogue.b0004",
+        "v01.epilogue.b0005",
+        "v01.epilogue.b0006",
+        "v01.epilogue.b0007",
+        "v01.epilogue.b0008"
+      ]
+    },
+    "by_entity": {
+      "entity_linche": [
+        "fact_linche_class_v01",
+        "event_points_announced",
+        "event_white_card_test",
+        "event_unsent_list_revealed",
+        "relation_linche_shenyan_v01_c03",
+        "relation_linche_shenyan_v01_epilogue",
+        "metric_linche_personal_points"
+      ],
+      "entity_xu_yingbai": [
+        "fact_xu_yingbai_class_v01",
+        "event_white_card_test",
+        "card_xu_yingbai_v01_end"
+      ],
+      "entity_shenyan": [
+        "fact_shenyan_class_v01",
+        "event_white_card_test",
+        "event_unsent_list_revealed",
+        "relation_linche_shenyan_v01_c03",
+        "relation_linche_shenyan_v01_epilogue"
+      ],
+      "entity_baichuan_yao": [
+        "fact_baichuan_role_v01"
+      ],
+      "entity_d_class": [
+        "event_points_announced",
+        "metric_d_class_points"
+      ],
+      "entity_zhoumi": [
+        "event_white_card_test"
+      ],
+      "term_class_points": [
+        "term_card_class_points_v01"
+      ]
+    }
+  }
+}

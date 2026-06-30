@@ -1,0 +1,24 @@
+{
+  "status": "ok",
+  "generated_at": "2026-06-30T04:46:09.179Z",
+  "generator": "novel-companion-tools/parser@0.1.0",
+  "volumes": [
+    {
+      "volume_id": "v01",
+      "main_text": "parsed/volumes/v01.md",
+      "chapter_count": 5,
+      "block_count": 41,
+      "scene_count": 5,
+      "asset_count": 5,
+      "alignment_count": 4
+    }
+  ],
+  "counts": {
+    "blocks": 41,
+    "scenes": 5,
+    "assets": 5,
+    "asset_anchors": 5,
+    "alignments": 4
+  },
+  "notes": []
+}

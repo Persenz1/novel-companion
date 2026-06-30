@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "generated_at": "2026-06-30T04:46:10.313Z",
+  "generator": "novel-companion-tools/validator@0.1.0",
+  "errors": [],
+  "warnings": [
+    {
+      "code": "ALIGNMENT_NOT_REVIEWED",
+      "message": "alignment v01.c03.a001 状态不是 reviewed。",
+      "file": "parsed/alignments.jsonl",
+      "object_id": "v01.c03.a001",
+      "severity": "warning"
+    }
+  ]
+}

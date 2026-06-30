@@ -25,3 +25,7 @@ data/private/
 *.txt
 *.pdf
 
+
+# Node toolchain
+node_modules/
+dist/

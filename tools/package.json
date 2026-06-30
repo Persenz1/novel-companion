@@ -1,0 +1,23 @@
+{
+  "name": "novel-companion-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phase 1 toolchain for novel-companion bookpacks (parser, validator, compiler).",
+  "type": "module",
+  "bin": {
+    "nc": "./src/cli.ts"
+  },
+  "scripts": {
+    "parse": "tsx src/cli.ts parse",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

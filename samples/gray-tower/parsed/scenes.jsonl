@@ -1,0 +1,5 @@
+{"id":"v01.prologue.s001","series_id":"gray_tower","volume_id":"v01","chapter_id":"v01.prologue","order":1,"title":"校门前的相遇","start_block":"v01.prologue.b0001","end_block":"v01.prologue.b0007","pov":null,"location_entity_id":null,"status":"parsed"}
+{"id":"v01.c01.s001","series_id":"gray_tower","volume_id":"v01","chapter_id":"v01.c01","order":1,"title":"点数公告","start_block":"v01.c01.b0001","end_block":"v01.c01.b0009","pov":null,"location_entity_id":null,"status":"parsed"}
+{"id":"v01.c02.s001","series_id":"gray_tower","volume_id":"v01","chapter_id":"v01.c02","order":1,"title":"未寄出的名单","start_block":"v01.c02.b0001","end_block":"v01.c02.b0009","pov":null,"location_entity_id":null,"status":"parsed"}
+{"id":"v01.c03.s001","series_id":"gray_tower","volume_id":"v01","chapter_id":"v01.c03","order":1,"title":"白卡测试","start_block":"v01.c03.b0001","end_block":"v01.c03.b0008","pov":null,"location_entity_id":null,"status":"parsed"}
+{"id":"v01.epilogue.s001","series_id":"gray_tower","volume_id":"v01","chapter_id":"v01.epilogue","order":1,"title":"真相","start_block":"v01.epilogue.b0001","end_block":"v01.epilogue.b0008","pov":null,"location_entity_id":null,"status":"parsed"}
