@@ -2,7 +2,7 @@
 //
 // 起草 Agent 写候选；复核 Agent 独立路由；低风险自动写 Accepted（带可回滚 Change），
 // 高风险升级成异常队列里的 ReviewItem 交人裁决。详见
-// docs/post-cleaning-operation-design-v0.2.md。
+// docs/modules/ai-workbench.md。
 import { FileStore } from "../fileStore.js";
 import type { Candidate, Manifest, ManifestVolume } from "../types.js";
 import type { WorkbenchConfig } from "./config.js";

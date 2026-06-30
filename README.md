@@ -6,11 +6,11 @@ This repository stores the planning documents and future engineering files for a
 
 ## Current Status
 
-This project is in phase 1 toolchain validation. 当前真实进度审计见 [Project Progress Audit 2026-06-30](docs/project-progress-audit-2026-06-30.md)。
+This project is in phase 1 toolchain validation. 当前状态见 [Status](docs/status.md)。
 
 Stages 1-4（原创测试书、清洗 Markdown、Parsed JSONL、硬校验）已经按当前工具链推进。Compiled 查询产物和 gray-tower fixture 也可用于验证防剧透查询。
 
-Stages 5-8（AI Candidates、复核、Accepted 写入、数据工作台操作流）已按「AI 起草 + 独立 AI 复核 + 人审计异常」架构实现为图形化数据工作台（`tools/`，`npm run workbench`），见 [Post-cleaning Operation Design v0.2](docs/post-cleaning-operation-design-v0.2.md)。三栏界面：左选章节范围 + 配置 API、中逐 block、右看标识 / 异常队列 / 审计回滚。工作台已有本地真实 LLM 试跑反馈；仓库内可复现测试仍使用无 key fixture，不提交 API key。
+Stages 5-8（AI Candidates、复核、Accepted 写入、数据工作台操作流）已按「AI 起草 + 独立 AI 复核 + 人审计异常」架构实现为图形化数据工作台（`tools/`，`npm run workbench`），见 [AI Workbench](docs/modules/ai-workbench.md)。三栏界面：左选章节范围 + 配置 API、中逐 block、右看标识 / 异常队列 / 审计回滚。工作台已有本地真实 LLM 试跑反馈；仓库内可复现测试仍使用无 key fixture，不提交 API key。
 
 尚未完成：输入第二卷时的前卷上下文压缩 / 检索策略尚未实测，真实书籍长程制作尚未压测；最低限度 Markdown 阅读器尚未开始实现。
 
@@ -27,20 +27,13 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 
 ## Documents
 
-- [Requirements v0.3](docs/requirements-v0.3.md)
-- [Phase 1 Implementation Spec](docs/phase-1-implementation-spec.md)
-- [Phase 1 Design Decisions](docs/phase-1-design-decisions-v0.1.md)
-- [Data Format v0.1](docs/data-format-v0.1.md)
-- [Validation Spec v0.1](docs/validation-spec-v0.1.md)
-- [Workflow Spec v0.1](docs/workflow-spec-v0.1.md)
-- [Agent Operation Spec v0.1](docs/agent-operation-spec-v0.1.md)
-- [Compiled Query Spec v0.1](docs/compiled-query-spec-v0.1.md)
-- [Project Prompts v0.1](docs/project-prompts-v0.1.md)
-- [Project Audit Prompt v0.1](docs/project-audit-prompt-v0.1.md)
-- [Gray Tower Test Book](docs/test-book-gray-tower.md)
-- [Post-cleaning Operation Design v0.2](docs/post-cleaning-operation-design-v0.2.md)
-- [Phase 5-8 Operation Redesign Note](docs/phase-5-8-operation-redesign-note.md)
-- [Project Progress Audit 2026-06-30](docs/project-progress-audit-2026-06-30.md)
-- [Discussion Archive 2026-06-30](docs/discussion-archive-2026-06-30.md)
-- [Requirements v0.2 historical draft](docs/requirements-v0.2.md)
-- [Requirements v0.1 historical draft](docs/requirements-v0.1.md)
+- [Docs Index](docs/README.md)
+- [Requirements](docs/requirements.md)
+- [Status](docs/status.md)
+- [Bookpack Data](docs/modules/bookpack-data.md)
+- [Toolchain](docs/modules/toolchain.md)
+- [AI Workbench](docs/modules/ai-workbench.md)
+- [Compiled Query](docs/modules/compiled-query.md)
+- [Reader](docs/modules/reader.md)
+- [Test Fixture](docs/modules/test-fixture.md)
+- [Archive](docs/archive/README.md)

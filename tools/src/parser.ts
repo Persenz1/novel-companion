@@ -1,5 +1,5 @@
-// Parser: Markdown volume -> Parsed JSONL, per docs/agent-operation-spec §4.2
-// and docs/data-format-v0.1.md §5.
+// Parser: Markdown volume -> Parsed JSONL, per docs/modules/toolchain.md
+// and docs/modules/bookpack-data.md.
 //
 // Parsed output is a regeneratable product. It does NOT carry review progress
 // (that lives in review/block_progress.jsonl). Japanese ja_refs are authored

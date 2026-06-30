@@ -1,7 +1,7 @@
 // Shared types for the novel-companion phase 1 toolchain.
 //
 // These mirror the on-disk JSON/JSONL shapes defined in
-// docs/data-format-v0.1.md. The Chinese main text is the single spine;
+// docs/modules/bookpack-data.md. The Chinese main text is the single spine;
 // Japanese only ever appears as reference content inside alignments.
 
 export type BlockKind = "paragraph" | "dialogue" | "separator" | "note";

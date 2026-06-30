@@ -1,5 +1,5 @@
 // Markdown marker scanner with line numbers, used by the Validator for the
-// §6 Markdown checks (docs/validation-spec-v0.1.md). Unlike the Parser, this
+// Markdown checks (docs/modules/toolchain.md). Unlike the Parser, this
 // preserves source positions and reports lines that look like markers but are
 // malformed, so the report can point a human/AI at the exact line to fix.
 import { isCommentLine, parseComment } from "./comment.js";

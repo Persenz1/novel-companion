@@ -1,8 +1,8 @@
 // Chinese-main-text timeline, shared by Validator and Compiler.
 //
 // Phase 1 spoiler comparison only recognises positions derived from the
-// Chinese body (docs/phase-1-design-decisions-v0.1.md §6,
-// docs/compiled-query-spec-v0.1.md §4):
+// Chinese body (docs/modules/bookpack-data.md,
+// docs/modules/compiled-query.md):
 //
 //   v01.start  v01.c01.start  v01.c01.b0001  v01.c01.end  v01.end
 //

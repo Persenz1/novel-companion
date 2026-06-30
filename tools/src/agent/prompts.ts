@@ -1,6 +1,6 @@
 // 起草 / 复核 两个角色的中文提示词。
 //
-// 设计依据 docs/post-cleaning-operation-design-v0.2.md：
+// 设计依据 docs/modules/ai-workbench.md：
 //   起草负责"尽量抽全"，复核负责"挑刺 + 核对依据 + 路由"，两者目标相反才有制衡。
 //   复核按"证据是否充分 + 是否属高风险类别"判断，不设数值阈值。
 import type { Block } from "../types.js";

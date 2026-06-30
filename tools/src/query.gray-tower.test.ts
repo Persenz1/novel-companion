@@ -1,5 +1,5 @@
 // Closed-loop integration test over the gray-tower fixture: asserts the spoiler
-// + relevance behaviour from docs/test-book-gray-tower.md §10.6/§10.10.
+// + relevance behaviour from docs/modules/test-fixture.md.
 //
 // The committed pack is at the post-cleaning state (no analysis data — the real
 // analysis is produced live by the workbench). To stay self-contained, this test

@@ -4,7 +4,7 @@
 //   ReviewQueue     - review/{block_progress,review_items,open_questions}.jsonl
 //   WorkRunStore    - reports/work_runs.jsonl
 //
-// Per docs/agent-operation-spec-v0.1.md: Accepted is only written through this
+// Per docs/modules/bookpack-data.md: Accepted is only written through this
 // controlled path, every Accepted write also emits a Change, and AI may not
 // silently write Accepted. These stores are the human-confirmation gate the
 // future built-in Agent will call; they do not call any model themselves.

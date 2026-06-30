@@ -1,5 +1,5 @@
 // getVisibleContext: the reader's single spoiler-safe query entry
-// (docs/compiled-query-spec-v0.1.md §5,§6).
+// (docs/modules/compiled-query.md).
 //
 // Hard rule: all enhanced data is filtered by `read_boundary`, never by
 // `current_block`. current_block only selects current-position relevance

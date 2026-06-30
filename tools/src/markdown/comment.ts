@@ -1,5 +1,5 @@
 // Parser for the single-line HTML comment markers defined in
-// docs/phase-1-design-decisions-v0.1.md §5 and docs/data-format-v0.1.md §2.
+// docs/modules/bookpack-data.md.
 //
 // Format:  <!-- tag: primary key: value key: "quoted value" -->
 //

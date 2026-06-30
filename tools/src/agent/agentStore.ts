@@ -4,7 +4,7 @@
 // 会从空开始重写所有文件；本模块面向长驻服务器，按对象增量追加 + 即时落盘，
 // 并支持三级回滚（单对象 / 单 Change / 整批 work_run）。
 //
-// 硬边界（docs/post-cleaning-operation-design-v0.2.md §7）：
+// 硬边界（docs/modules/ai-workbench.md）：
 //   每次写 Accepted 必须同步生成一条 Change；自动写入标 auto_accepted + reviewer_model；
 //   每条都能按 Change 或 work_run 整批撤销。
 import { FileStore } from "../fileStore.js";

@@ -1,4 +1,4 @@
-// Accepted type -> file mapping (docs/data-format-v0.1.md §7.2), shared by the
+// Accepted type -> file mapping (docs/modules/bookpack-data.md), shared by the
 // Validator and the AcceptedStore so the two never drift.
 
 export const ACCEPTED_TYPE_FILES: Array<{ type: string; file: string }> = [

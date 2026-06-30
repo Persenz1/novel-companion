@@ -1,5 +1,5 @@
 // Validator: hard checks + soft hints over a bookpack, per
-// docs/validation-spec-v0.1.md. Writes reports/validation_report.json.
+// docs/modules/toolchain.md. Writes reports/validation_report.json.
 //
 // An `error` blocks the next stage (compile/import); a `warning` does not but
 // must be recorded. Every issue tries to carry a fixable location so a human

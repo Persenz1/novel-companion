@@ -2,7 +2,7 @@
 
 第一阶段 bookpack 工具链（Node + TypeScript）。
 
-当前工具链覆盖 parser、validator、fixture、compiler、query，以及清洗后制作阶段的数据工作台（`npm run workbench`）。工作台按 `docs/post-cleaning-operation-design-v0.2.md` 实现：AI 起草 + 独立 AI 复核自动落盘 + 人审计异常。
+当前工具链覆盖 parser、validator、fixture、compiler、query，以及清洗后制作阶段的数据工作台（`npm run workbench`）。工作台按 `docs/modules/ai-workbench.md` 实现：AI 起草 + 独立 AI 复核自动落盘 + 人审计异常。
 
 状态边界：工作台已有本地真实 LLM 试跑反馈，但仓库自动测试不调用模型、不需要 API key。真实书籍长程制作、多卷输入时的前卷上下文压缩 / 检索，以及最低限度阅读器 UI 仍未完成。
 
@@ -48,7 +48,7 @@ Markdown 卷文件 → `parsed/{blocks,scenes,assets,asset_anchors,alignments}.j
 
 替代模型调用参与自动化测试：编写候选集并通过真实写入接口重放一次人工复核，确定性地生成 candidates + accepted + review + work_runs。满足测试书 §10.4/§10.5 计数与 §10.6/§10.10 防剧透用例。它不证明真实 LLM 长程质量，只保证数据格式、写入链路和查询语义可复现。
 
-## 数据工作台（清洗后制作阶段，§ post-cleaning-operation-design-v0.2）
+## 数据工作台（清洗后制作阶段）
 
 图形化三栏工作台，AI 全程驱动 + AI 复核 + 人审计异常：
 

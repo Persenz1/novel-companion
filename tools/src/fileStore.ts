@@ -1,7 +1,7 @@
 // FileStore: the only module that touches the filesystem for a bookpack.
 // All other tools (Parser, Validator, Compiler, ...) go through it so that a
 // future database/repository layer can replace it without changing callers,
-// per docs/agent-operation-spec-v0.1.md §4.1 and §10.
+// per docs/modules/bookpack-data.md and docs/modules/toolchain.md.
 import fs from "node:fs";
 import path from "node:path";
 

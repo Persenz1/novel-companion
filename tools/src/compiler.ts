@@ -1,5 +1,5 @@
 // Compiler: manifest + Parsed JSONL + Accepted JSONL -> compiled/reader_index.json
-// (docs/compiled-query-spec-v0.1.md). The reader index is a regeneratable query
+// (docs/modules/compiled-query.md). The reader index is a regeneratable query
 // product, never an authoring source. Compile is gated on a passing validation
 // report (§2): if reports/validation_report.json is missing or not `passed`,
 // compilation refuses.

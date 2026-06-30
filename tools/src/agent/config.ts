@@ -3,7 +3,7 @@
 // 配置存在 tools/.workbench-config.json（已 gitignore，不进 bookpack、不含正文）。
 // 采用 OpenAI 通用协议：每个角色一组 { base_url, api_key, model }。
 // 起草与复核模型分离，复核模型应不同于起草模型（双 AI 制衡，见
-// docs/post-cleaning-operation-design-v0.2.md §8）。
+// docs/modules/ai-workbench.md）。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
