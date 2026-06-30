@@ -6,11 +6,13 @@ This repository stores the planning documents and future engineering files for a
 
 ## Current Status
 
-This project is in phase 1 toolchain validation.
+This project is in phase 1 toolchain validation. 当前真实进度审计见 [Project Progress Audit 2026-06-30](docs/project-progress-audit-2026-06-30.md)。
 
 Stages 1-4（原创测试书、清洗 Markdown、Parsed JSONL、硬校验）已经按当前工具链推进。Compiled 查询产物和 gray-tower fixture 也可用于验证防剧透查询。
 
-Stages 5-8（AI Candidates、复核、Accepted 写入、数据工作台操作流）已按「AI 起草 + 独立 AI 复核 + 人审计异常」架构实现为图形化数据工作台（`tools/`，`npm run workbench`），见 [Post-cleaning Operation Design v0.2](docs/post-cleaning-operation-design-v0.2.md)。三栏界面：左选章节范围 + 配置 API、中逐 block、右看标识 / 异常队列 / 审计回滚。读写全链路已用 gray-tower 验证，实际 LLM 调用待接入 API key。
+Stages 5-8（AI Candidates、复核、Accepted 写入、数据工作台操作流）已按「AI 起草 + 独立 AI 复核 + 人审计异常」架构实现为图形化数据工作台（`tools/`，`npm run workbench`），见 [Post-cleaning Operation Design v0.2](docs/post-cleaning-operation-design-v0.2.md)。三栏界面：左选章节范围 + 配置 API、中逐 block、右看标识 / 异常队列 / 审计回滚。工作台已有本地真实 LLM 试跑反馈；仓库内可复现测试仍使用无 key fixture，不提交 API key。
+
+尚未完成：输入第二卷时的前卷上下文压缩 / 检索策略尚未实测，真实书籍长程制作尚未压测；最低限度 Markdown 阅读器尚未开始实现。
 
 ## Core Idea
 
@@ -38,6 +40,7 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 - [Gray Tower Test Book](docs/test-book-gray-tower.md)
 - [Post-cleaning Operation Design v0.2](docs/post-cleaning-operation-design-v0.2.md)
 - [Phase 5-8 Operation Redesign Note](docs/phase-5-8-operation-redesign-note.md)
+- [Project Progress Audit 2026-06-30](docs/project-progress-audit-2026-06-30.md)
 - [Discussion Archive 2026-06-30](docs/discussion-archive-2026-06-30.md)
 - [Requirements v0.2 historical draft](docs/requirements-v0.2.md)
 - [Requirements v0.1 historical draft](docs/requirements-v0.1.md)

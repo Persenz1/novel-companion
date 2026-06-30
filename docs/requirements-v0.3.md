@@ -84,6 +84,8 @@
 
 当前结论已落到 `docs/post-cleaning-operation-design-v0.2.md`：保留 Candidates 作为起草到复核之间的内部中间格式；由起草 Agent 生成草案、独立复核 Agent 路由，低风险自动写 Accepted + Change，高风险进入异常队列，人负责异常裁决和 Change 审计。
 
+代码进度以 `docs/project-progress-audit-2026-06-30.md` 为准：数据工作台和双 AI 流水线已实现并有本地真实 LLM 试跑反馈，但仓库可复现测试不调用模型；真实书籍长程制作、第二卷前文上下文压缩 / 检索、最低限度 Markdown 阅读器仍未完成。
+
 ## 5. 数据包类型
 
 系统区分工程包和阅读包。

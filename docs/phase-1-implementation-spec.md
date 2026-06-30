@@ -32,6 +32,15 @@
 
 阶段 5-8 的原始描述仍保留为数据格式和闭环目标，但不再作为逐候选 Web 工作台的直接实现指令。2026-06-30 的原型验证表明，candidate-by-candidate 的人工复核方式无法承受真实长篇制作量；当前已按 `docs/post-cleaning-operation-design-v0.2.md` 改为 AI 起草 + 独立 AI 复核 + 人审计异常。
 
+代码事实见 `docs/project-progress-audit-2026-06-30.md`。截至该审计：
+
+- parser / validator / compiler / query 已有自动化验证。
+- 数据工作台、起草 / 复核流水线、异常队列、Change 写入和回滚入口已实现，并已有本地真实 LLM 试跑反馈。
+- 仓库可复现测试不调用模型、不需要 API key；gray-tower 提交态不保存 AI 后处理数据，测试通过临时 fixture 生成。
+- 尚未用真实书籍做长程制作压测。
+- 尚未验证第二卷输入时如何提供第一卷前文信息且不过度占据上下文空间。
+- 最低限度 Markdown 阅读器尚未开始实现。
+
 当前执行规则：
 
 - 可以维护 Candidate / Accepted / Review / Compiled 的文件格式和校验规则。

@@ -13,6 +13,8 @@
 
 当前特别注意：阶段 5-8 清洗后操作逻辑已重构定案，见 `docs/post-cleaning-operation-design-v0.2.md`（AI 驱动 + 独立 AI 复核 + 人审计异常，取代旧的逐候选工作台）。`0.3 清洗后文本操作 Agent` 以及阶段五、阶段六、阶段八的提示词已按 v0.2 口径更新，实现前必须先读该设计文档。
 
+当前代码进度必须先读 `docs/project-progress-audit-2026-06-30.md`。代码事实：工作台已有本地真实 LLM 试跑反馈，但仓库自动测试不调用模型、不提交 API key；真实书籍长程制作、第二卷前文上下文压缩 / 检索、最低限度 Markdown 阅读器仍未完成。
+
 ## 0. 通用接手提示词
 
 ```text
@@ -32,6 +34,7 @@
 - docs/discussion-archive-2026-06-30.md
 - docs/phase-5-8-operation-redesign-note.md
 - docs/post-cleaning-operation-design-v0.2.md
+- docs/project-progress-audit-2026-06-30.md
 
 项目当前阶段不是做完整桌面应用，而是跑通第一阶段闭环：
 
@@ -46,6 +49,9 @@
 - Accepted 正式数据必须可追溯；默认追溯到中文正文 block，图片主体等例外必须能通过 asset anchor 回到正文位置。
 - 第一阶段先用 JSON/JSONL 和 Markdown，不急着上 SQLite 或完整桌面应用。
 - 不要实现 candidate-by-candidate 的逐候选复核 UI（旧方案已回滚）。人的主操作面是异常队列 + Change 审计 + 整批回滚，不是逐条候选按钮。
+- 仓库测试不得依赖或提交 API key；真实 LLM 试跑只能提交脱敏记录、问题清单和代码修正。
+- 第二卷及后续卷尚未验证前文上下文压缩 / 检索策略；不要假设“整卷背景”已经解决跨卷连续性。
+- 最低限度 Markdown 阅读器尚未实现，Compiled 查询接口不是阅读器 UI。
 
 工作时请保持改动聚焦。若需要新增文件，请优先放在 docs/、samples/gray-tower/ 或后续约定的工具目录中。
 ```
@@ -122,7 +128,7 @@
    路由靠复核 Agent 的自然语言判断（证据是否充分 + 是否属高风险类别），不设数值置信阈值。
 3. 必须升级给人裁决的高风险类别：实体合并、歧义说话人、关系变化、
    伏笔/隐藏身份/误导叙述、数值冲突或与已有 Accepted 冲突、图片人物身份识别、复核自身拿不准的草案。
-4. 受控自动写入：autoAccept 必须强制生成 Change；提供三级回滚（单对象 / 单 Change / 整批 work_run）。
+4. 受控自动写入：autoAccept 必须强制生成 Change；当前实现已有单 Change / 整批 work_run 回滚，单对象专用入口和 update/merge/deprecate 的 before 快照恢复仍需补齐。
 5. 模型配置：起草与复核各配一个模型、可跨厂商（如起草 ds4flash、复核 dsv4pro 或 mimov2.5），
    复核模型必须不同于起草模型；换模型只改本地配置不改流程。无信任档位、无数值阈值。
 6. 写 work_run，记录范围、上下文预算、自动/升级/拒绝计数与 drafter_model/reviewer_model。
@@ -628,6 +634,8 @@
 当前状态：
 
 阶段 5-8 操作逻辑已按 `docs/post-cleaning-operation-design-v0.2.md` 定案。端到端验收不通过逐候选工作台，而是验证「起草→独立复核→自动落盘→异常升级→回滚」闭环；fixture 仍可用于数据格式、validator、compiler 和 query 验证。
+
+代码事实以 `docs/project-progress-audit-2026-06-30.md` 为准。工作台已有本地真实 LLM 试跑反馈，但尚未用真实书籍做长程测试；阅读器 UI 尚未实现。
 
 请阅读全部 docs/*.md，并运行已实现的工具链。
 

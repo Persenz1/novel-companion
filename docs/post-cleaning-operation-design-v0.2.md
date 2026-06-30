@@ -134,6 +134,7 @@ v0.2 的核心转变：
   - 单对象：撤销某个 Accepted + 其 Change。
   - 单 Change：定点撤销。
   - 整批 work_run：发现起草 Agent 在某段跑偏时，一键回滚该范围全部自动写入，重做。
+- 当前代码实现状态：`AgentStore` 已支持单 Change 和整批 work_run 回滚，适合撤销自动接受的新对象；单对象专用入口、update / merge / deprecate 的 `before` 快照恢复尚未完成。
 - Change 日志是人的**主审计面**：人不看每条候选，而是抽查「这批自动落盘里有没有离谱的」，按 work_run 维度看分布（自动 N 条 / 升级 M 条 / 拒绝 K 条）。
 - OpenQuestion 在后文揭示点 resolved 时，仍必须写 Accepted + Change，并把 `resolved_by_change_id` 指向它。
 
@@ -166,6 +167,14 @@ v0.2 的核心转变：
 
 已实现为图形化三栏 Web 工作台（`tools/`，`npm run workbench`）：左栏按**章节**选生成范围 + 面板配置 API/供应商（OpenAI 通用协议）；中栏逐 block 展示；右栏点开 block 看其全部「标识」，并含异常队列、审计/回滚两个标签页。界面用语中文。
 
+当前实现边界：
+
+- 作业目标粒度是章节；起草 / 复核会把该章节所属的整卷正文作为背景。
+- 已有本地真实 LLM 试跑反馈，但仓库自动测试不调用模型、不保存 API key，也不提交模型输出。
+- 尚未用真实书籍做长程制作压测。
+- 尚未验证输入第二卷时如何提供第一卷前文信息且不过度占据上下文空间；当前没有前卷压缩记忆或检索式历史上下文注入。
+- 最低限度 Markdown 阅读器尚未实现，现有的是制作工作台和 compiled 查询接口。
+
 ## 11. 对现有数据与接口的影响
 
 保持第一阶段 JSON/JSONL，不推倒已实现的 stores。
@@ -181,13 +190,14 @@ v0.2 的核心转变：
 
 ## 12. 待定参数（实施前确认）
 
-- 起草 / 复核各用哪个模型（已定方向：分离 + 可跨厂商，例如起草 ds4flash、复核 dsv4pro 或 mimov2.5；具体型号实施时定）。
 - §6.1 / §6.2 分类是否要再细分（例如 fact 里区分「客观属性」vs「带评价的描述」）。
 - 异常队列是否需要优先级与批量操作（同类合并候选一次裁决）。
 - scene digest 是否在第一阶段就做，还是 CLI 审计先行。
+- 第二卷及后续卷的上下文策略：前卷 Accepted / 角色卡 / 事件摘要 / OpenQuestion 如何压缩、检索和注入，目标是在不塞入全系列正文的情况下保持实体、关系和伏笔连续。
+- `AgentStore` 对 update / merge / deprecate 的 Change `before` 快照与回滚语义。
 
 ## 13. 与文档体系的关系 / 下一步
 
 - 本文取代旧方案的「逐候选复核」部分；`agent-operation-spec-v0.1.md` §6/§9/§11 和 `workflow-spec-v0.1.md` §3/§5 的逐候选描述以本文为准。
 - 已同步：`project-prompts-v0.1.md`（使用规则、通用提示词、0.1#4、0.3 整段、阶段五/六/八）、`README.md`、`phase-5-8-operation-redesign-note.md` 均已对齐本文口径并指向本文。
-- 已实现：起草/复核双 AI 流水线 + 增量 AgentStore（自动落盘 + Change + 三级回滚）+ 图形化三栏工作台（`tools/src/server.ts`、`tools/src/agent/*`、`tools/web/*`，`npm run workbench`）。读侧（章节/逐 block/标识/异常队列/审计）与写侧（自动落盘 + 回滚 + 人工裁决）已用 gray-tower 验证；实际 LLM 调用待接入 API key。
+- 已实现：起草/复核双 AI 流水线 + 增量 AgentStore（自动落盘 + Change + 回滚）+ 图形化三栏工作台（`tools/src/server.ts`、`tools/src/agent/*`、`tools/web/*`，`npm run workbench`）。仓库内通过 gray-tower fixture 验证格式、写入、回滚入口和查询语义；制作者本地已做真实 LLM 试跑。真实书籍长程制作、多卷前文压缩和阅读器 UI 仍是后续工作。
