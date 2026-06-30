@@ -31,8 +31,8 @@
 - 中文文本是唯一主轴。
 - 日文只作为参考渲染内容，不进入主操作链。
 - 防剧透查询使用 read_boundary，不直接使用 current_block 放宽边界。
-- AI 只能写 Candidates，不能直接写 Accepted。
-- Accepted 正式数据必须能追溯到中文正文 block。
+- AI 可以写 Candidates、ReviewItems 和 OpenQuestions，但不能绕过人工确认写 Accepted。
+- Accepted 正式数据必须可追溯；默认追溯到中文正文 block，图片主体等例外必须能通过 asset anchor 回到正文位置。
 - 工作台复核最小单位是 block，scene 只作为上下文提示。
 - 第一阶段先用 JSON/JSONL 和 Markdown，不急着上 SQLite 或完整桌面应用。
 - 清洗后文本操作阶段应通过内置制作 Agent 协调工具接口；Agent 应具备基础 AI 制作能力，能按 block/source_span 读取正文、生成结构化候选、显示上下文预算和作业范围，但不能绕过人工确认直接写 Accepted。

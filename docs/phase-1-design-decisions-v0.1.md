@@ -123,7 +123,7 @@ AI 是结构化制作的第一起草者，人工是正式数据的裁决者，Ag
 - 按 block/source_span 顺序读取正文。
 - 检索当前范围相关 Accepted、Candidates、OpenQuestions。
 - 调用 AI 生成候选草案。
-- 候选覆盖 entity、fact、event、relation_change、speaker_label、metric、metric_change、term_card、open_question。
+- 候选覆盖 entity、fact、event、relation_change、speaker_label、metric、metric_change、term_card、character_card、asset_subject、review_item、open_question。
 - 为候选生成 source_span、visible_from、confidence、evidence、risk_flags、payload.draft。
 - 校验候选引用和格式。
 - 按时间顺序送入复核工作台。

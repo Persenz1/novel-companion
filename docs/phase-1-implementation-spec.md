@@ -96,7 +96,7 @@ candidates/candidates.jsonl
 - 读取 validation_report，并提出返工建议。
 - 按 block/source_span 顺序读取正文。
 - 检索当前范围相关的 Accepted、Candidates 和 OpenQuestions。
-- 调用 AI 生成 entity、fact、event、relation_change、speaker_label、metric、metric_change、term_card、open_question 等候选草案。
+- 调用 AI 生成 entity、fact、event、relation_change、speaker_label、metric、metric_change、term_card、character_card、asset_subject、review_item、open_question 等候选草案。
 - 为候选生成 source_span、visible_from、confidence、evidence、risk_flags 和 payload.draft。
 - 校验候选引用和格式。
 - 按正文时间线组织复核队列。

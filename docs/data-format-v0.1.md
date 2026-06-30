@@ -364,9 +364,10 @@ dismissed
 
 - `status`
 - `visible_from`
-- `source_span`
 - `created_change_id`
 - `updated_change_ids`
+
+默认来源追溯字段是 `source_span`，引用中文正文 block range。
 
 `character_card` 可以用 `source_refs` 代替直接 `source_span`，但 `source_refs` 引用的 Accepted 对象必须能追溯到中文正文 block。
 

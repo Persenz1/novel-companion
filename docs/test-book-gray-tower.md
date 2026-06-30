@@ -206,7 +206,7 @@ samples/gray-tower/
 
 - 至少 15 条 Accepted 对象。
 - 至少包含 5 个 entities、3 个 facts、2 个 events、2 个 relation_changes、2 个 speaker_labels、1 个 metric、2 个 metric_changes、1 个 term_card、1 个 character_card。
-- 每条 Accepted 都有 `source_span` 或明确允许的 `source_refs`。
+- 每条 Accepted 都有 `source_span`，或符合 `character_card.source_refs` / `asset_subject.asset_anchor_id` 例外规则。
 - 每条 Accepted 都有 `created_change_id`。
 - `accepted/changes.jsonl` 至少 10 条，覆盖 `accept_candidate`、`accept_candidate_with_edit`、`manual_create`。
 

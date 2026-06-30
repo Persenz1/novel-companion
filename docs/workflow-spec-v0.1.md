@@ -68,7 +68,7 @@ AI 默认读取：
 - 已确认事实、事件、关系、数值摘要。
 - 未决问题摘要。
 
-AI 输出到：
+AI 候选输出到：
 
 ```text
 candidates/candidates.jsonl
@@ -90,6 +90,8 @@ AI 可以输出：
 - review_item
 
 AI 可以提出新实体 ID，但只作为候选。
+
+AI 也可以直接创建 ReviewItem 或 OpenQuestion，用于记录短期复核任务或长期未决问题；这些内容不进入普通阅读器，也不等同于 Accepted 正式数据。
 
 每条 Candidate 必须包含 `source_span`。`block_id` 只是主显示位置，默认等于 `source_span.start_block`。工作台按 `source_span.start_block` 的正文时间线顺序推进，范围型候选复核时展示完整 `source_span`。
 

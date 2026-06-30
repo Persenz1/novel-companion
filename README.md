@@ -6,9 +6,9 @@ This repository stores the planning documents and future engineering files for a
 
 ## Current Status
 
-This project is in the requirements and architecture discussion stage.
+This project is in the phase 1 specification stage.
 
-No implementation priority is finalized yet. The current focus is to define product scope, functional requirements, data boundaries, legal/content boundaries, and the AI-assisted data curation workflow.
+The current focus is to run a local end-to-end making loop: cleaned Markdown, Parsed JSONL, validation, AI Candidates, block review, Accepted data, Compiled query output, and a minimal Markdown reader.
 
 ## Core Idea
 
@@ -23,8 +23,6 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 
 ## Documents
 
-- [Requirements v0.2](docs/requirements-v0.2.md)
-- [Requirements v0.1](docs/requirements-v0.1.md)
 - [Requirements v0.3](docs/requirements-v0.3.md)
 - [Phase 1 Implementation Spec](docs/phase-1-implementation-spec.md)
 - [Phase 1 Design Decisions](docs/phase-1-design-decisions-v0.1.md)
@@ -37,4 +35,6 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 - [Project Audit Prompt v0.1](docs/project-audit-prompt-v0.1.md)
 - [Gray Tower Test Book](docs/test-book-gray-tower.md)
 - [Discussion Archive 2026-06-30](docs/discussion-archive-2026-06-30.md)
+- [Requirements v0.2 historical draft](docs/requirements-v0.2.md)
+- [Requirements v0.1 historical draft](docs/requirements-v0.1.md)
 
