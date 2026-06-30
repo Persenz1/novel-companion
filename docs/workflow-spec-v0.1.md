@@ -52,6 +52,7 @@ Agent 的职责：
 - 在工作台中按 block 提供候选和建议操作。
 - 在人工确认后通过受控接口写入 Accepted 和 Changes。
 - 调用 compiler 生成 reader_index。
+- 显示当前作业范围、上下文预算、已作业 block 和未作业 block。
 
 Agent 可以自主选择下一步工具操作，但不能静默写入 Accepted。任何正式增强数据变更都必须经过人工确认并生成 Change。
 
@@ -90,6 +91,19 @@ AI 可以输出：
 
 AI 可以提出新实体 ID，但只作为候选。
 
+每条 Candidate 必须包含 `source_span`。`block_id` 只是主显示位置，默认等于 `source_span.start_block`。工作台按 `source_span.start_block` 的正文时间线顺序推进，范围型候选复核时展示完整 `source_span`。
+
+Candidate 的 `payload` 应包含：
+
+- `target_type`
+- `draft`
+- `evidence`
+- `risk_flags`
+
+`draft` 是未来 Accepted 对象的草案，但不包含 `created_change_id`。
+
+AI 作业可以按整卷、章节、scene、固定 block 数或自定义 range 执行。每次作业应记录到 `reports/work_runs.jsonl`，用于区分已作业和未作业 block。
+
 ## 5. 人工复核
 
 人工复核以 block 为最小单位，按正文顺序推进。
@@ -118,6 +132,8 @@ AI 可以提出新实体 ID，但只作为候选。
 - 写入 `accepted/changes.jsonl`。
 - 更新 block 复核状态。
 
+block 复核状态写入 `review/block_progress.jsonl`，不写入 Parsed。
+
 ## 6. ReviewItem 与 OpenQuestion
 
 ReviewItem 是短期复核任务。
@@ -125,6 +141,14 @@ ReviewItem 是短期复核任务。
 OpenQuestion 是长期悬而未决的问题，例如身份不明、疑似伏笔、关系影响待确认。
 
 两者都不进入普通阅读界面，只在数据工作台显示。
+
+Review 区分工：
+
+- `review/block_progress.jsonl`：block 制作进度。
+- `review/review_items.jsonl`：短期待处理任务。
+- `review/open_questions.jsonl`：长期未决问题。
+
+OpenQuestion 的 `has_open_question` block 状态不阻塞继续复核。后文确认 OpenQuestion 时，如果产生正式数据，必须写 Accepted + Change，并将 OpenQuestion 标记为 `resolved`。
 
 ## 7. 编译阶段
 
@@ -141,6 +165,8 @@ compiled/reader_index.json
 ```
 
 Compiled 产物不人工维护，可以随时重新生成。
+
+Compiled 查询结构和 `getVisibleContext(current_block, read_boundary, options)` 见 `docs/compiled-query-spec-v0.1.md`。只有 validation report 无 error 时才允许 compile。
 
 ## 8. 阅读器验证
 

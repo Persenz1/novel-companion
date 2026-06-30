@@ -18,6 +18,11 @@
 -> Markdown 阅读器
 ```
 
+第一阶段执行时还应遵守：
+
+- `docs/phase-1-design-decisions-v0.1.md`
+- `docs/compiled-query-spec-v0.1.md`
+
 ## 2. 模块顺序
 
 ### 2.1 清洗输出
@@ -52,6 +57,8 @@ reports/cleaning_report.json
 
 `blocks.jsonl` 保存正文副本，可作为结构化正文使用。
 
+Parsed 是可重复生成产物，不保存人工复核进度。block 制作进度写入 `review/block_progress.jsonl`。
+
 ### 2.3 硬校验
 
 校验 manifest、Markdown、JSONL、引用完整性、时间线位置和安全边界。
@@ -76,19 +83,26 @@ candidates/candidates.jsonl
 
 每条候选绑定 block 或 block range。
 
+候选必须包含 `source_span`。`block_id` 只是工作台主显示位置，默认等于 `source_span.start_block`。复核队列按 `source_span.start_block` 的正文时间线顺序推进。
+
 ### 2.5 内置制作 Agent
 
 清洗后文本操作阶段应提供一个轻量内置 Agent，用来协调 parser、validator、candidate generator、review queue、accepted store 和 compiler。
 
-第一阶段 Agent 不需要复杂架构，但必须具备以下能力：
+第一阶段 Agent 不需要复杂自主规划，但必须具备基础 AI 制作能力：
 
 - 读取当前 bookpack 状态。
 - 调用 parser 和 validator。
 - 读取 validation_report，并提出返工建议。
-- 生成或整理 Candidates。
-- 按 block 组织复核队列。
+- 按 block/source_span 顺序读取正文。
+- 检索当前范围相关的 Accepted、Candidates 和 OpenQuestions。
+- 调用 AI 生成 entity、fact、event、relation_change、speaker_label、metric、metric_change、term_card、open_question 等候选草案。
+- 为候选生成 source_span、visible_from、confidence、evidence、risk_flags 和 payload.draft。
+- 校验候选引用和格式。
+- 按正文时间线组织复核队列。
 - 主动把低置信、冲突、主观判断和高剧透风险内容交给人工复核。
 - 在人工确认后写入 Accepted 和 Changes。
+- 更新 Candidate status 和 block_progress。
 - 调用 compiler 生成 reader_index。
 
 Agent 不能绕过人工确认直接写 Accepted。详细规则见 `docs/agent-operation-spec-v0.1.md`。
@@ -119,6 +133,8 @@ Agent 不能绕过人工确认直接写 Accepted。详细规则见 `docs/agent-o
 
 AI 不直接写 Accepted。
 
+Accepted 对象必须带 `created_change_id`。Change 必须带 `target_file`、`target_type`、`target_id`、`operation`、`approved_by` 和 `created_at`。
+
 ### 2.8 Compiled 查询
 
 第一阶段编译为：
@@ -128,6 +144,8 @@ compiled/reader_index.json
 ```
 
 不急着使用 SQLite。Compiled 是可再生成产物，不作为人工维护源文件。
+
+Compiled 查询结构和 `getVisibleContext(current_block, read_boundary, options)` 见 `docs/compiled-query-spec-v0.1.md`。
 
 ### 2.9 Markdown 阅读器
 
@@ -160,6 +178,8 @@ reviewed
 has_open_question
 skipped
 ```
+
+这些状态落盘在 `review/block_progress.jsonl`，不写入 Parsed。
 
 ## 4. 阅读进度规则
 

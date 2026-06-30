@@ -13,10 +13,12 @@
 
 - docs/requirements-v0.3.md
 - docs/phase-1-implementation-spec.md
+- docs/phase-1-design-decisions-v0.1.md
 - docs/data-format-v0.1.md
 - docs/validation-spec-v0.1.md
 - docs/workflow-spec-v0.1.md
 - docs/agent-operation-spec-v0.1.md
+- docs/compiled-query-spec-v0.1.md
 - docs/test-book-gray-tower.md
 - docs/discussion-archive-2026-06-30.md
 
@@ -33,7 +35,7 @@
 - Accepted 正式数据必须能追溯到中文正文 block。
 - 工作台复核最小单位是 block，scene 只作为上下文提示。
 - 第一阶段先用 JSON/JSONL 和 Markdown，不急着上 SQLite 或完整桌面应用。
-- 清洗后文本操作阶段应通过内置制作 Agent 协调工具接口；Agent 可以操作 parser、validator、candidate queue、review queue、compiler，但不能绕过人工确认直接写 Accepted。
+- 清洗后文本操作阶段应通过内置制作 Agent 协调工具接口；Agent 应具备基础 AI 制作能力，能按 block/source_span 读取正文、生成结构化候选、显示上下文预算和作业范围，但不能绕过人工确认直接写 Accepted。
 
 工作时请保持改动聚焦。若需要新增文件，请优先放在 docs/、samples/gray-tower/ 或后续约定的工具目录中。
 ```
@@ -46,7 +48,7 @@
 1. 测试文章/样例 bookpack 任务只改 samples/gray-tower/ 和必要样例数据。
 2. Parser 任务只负责 Markdown -> Parsed JSONL，不写 Accepted。
 3. Validator 任务只负责校验和 reports/validation_report.json，不修改业务数据，除非明确要求实现自动修复。
-4. 内置制作 Agent 任务只设计或实现工具协调层，不改变数据格式规范。
+4. 内置制作 Agent 任务只设计或实现工具协调层、上下文预算和 AI 候选生成流程，不改变数据格式规范。
 5. 阅读器任务只读 manifest、Markdown、Parsed、Compiled 或 mock reader_index，不修改 schema、parser、validator。
 
 如果发现数据格式不够用，先记录到 notes 或报告，不要在实现任务中擅自改 schema。
@@ -90,10 +92,11 @@
 - docs/workflow-spec-v0.1.md
 - docs/data-format-v0.1.md
 - docs/validation-spec-v0.1.md
+- docs/phase-1-design-decisions-v0.1.md
 
 目标：
 
-实现一个轻量 Agent 架构，使它能协调 parser、validator、candidate generator、review queue、accepted store、compiler 等接口。
+实现一个轻量 Agent 架构，使它能协调 parser、validator、candidate generator、review queue、accepted store、compiler 等接口，并能对清洗后正文进行基础 AI 结构化制作。
 
 任务：
 
@@ -110,7 +113,8 @@
    - 选择下一步操作
    - 调用工具
    - 读取报告
-   - 生成候选或复核项
+   - 显示上下文预算、作业范围、已作业 block 和未作业 block
+   - 按 block/source_span 调用 AI 生成候选或复核项
    - 请求人工确认
    - 人工确认后写入 Accepted 和 Changes
 3. Agent 可以直接操作 JSONL 或未来数据库适配层，但必须通过接口操作。
@@ -128,7 +132,8 @@
 
 - Agent 能调用 parser/validator/compiler。
 - Agent 能读取 validation_report 并提出修复建议。
-- Agent 能生成或整理 Candidates。
+- Agent 能显示上下文预算和作业范围。
+- Agent 能生成或整理包含 evidence、risk_flags 和 payload.draft 的 Candidates。
 - Agent 能把不确定内容转为 ReviewItem 或 OpenQuestion。
 - Agent 能在人工确认后写 Accepted 和 Change。
 - Agent 不直接越权修改 Accepted。

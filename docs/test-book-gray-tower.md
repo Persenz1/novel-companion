@@ -158,3 +158,96 @@ samples/gray-tower/
   assets/
 ```
 
+## 10. 第一阶段硬验收指标
+
+《灰塔学院测试卷》是第一阶段验收夹具，不追求文学完成度，但必须覆盖工具链最容易出错的边界。
+
+### 10.1 正文结构
+
+- 1 卷。
+- 5 个章节：`v01.prologue`、`v01.c01`、`v01.c02`、`v01.c03`、`v01.epilogue`。
+- 每章至少 5 个 block。
+- 全卷至少 35 个 block。
+- 至少 8 个 dialogue block。
+- 至少 4 个 scene。
+- 至少 1 个 scene 跨 5 个以上 block。
+- 至少 1 个 separator 或 note block。
+- 至少 1 个章节标题和 manifest 标题可用于一致性校验。
+
+### 10.2 Markdown 标记
+
+- 每个章节都有 `chapter` 注释。
+- 每个 block 都有 `block` 注释。
+- 至少 4 组 `scene action: start/end`。
+- 至少 3 个 `asset` 注释。
+- 至少 4 个 `alignment` 注释。
+- 至少 1 个多 block alignment，例如 `blocks: v01.c01.b0002,v01.c01.b0003`。
+- 使用 `tag: primary key: value` 注释格式。
+
+### 10.3 人物、组织与术语
+
+- 至少 5 个人物实体。
+- 至少 3 个组织或班级实体。
+- 至少 2 个术语实体。
+- 至少 1 个人物首次身份不明，后文再揭示。
+- 至少 1 个疑似同一实体或别名候选，用于测试合并不自动发生。
+
+### 10.4 Candidates 与复核
+
+- 至少 25 条 Candidate。
+- 覆盖 `entity`、`fact`、`event`、`relation_change`、`speaker_label`、`metric`、`metric_change`、`term_card`、`character_card`、`asset_subject`、`review_item`、`open_question`。
+- 至少 3 条低置信候选。
+- 至少 2 条冲突或疑似重复候选。
+- 至少 1 条候选转 ReviewItem。
+- 至少 1 条候选转 OpenQuestion。
+- 至少 1 条修改后接受。
+
+### 10.5 Accepted 数据
+
+- 至少 15 条 Accepted 对象。
+- 至少包含 5 个 entities、3 个 facts、2 个 events、2 个 relation_changes、2 个 speaker_labels、1 个 metric、2 个 metric_changes、1 个 term_card、1 个 character_card。
+- 每条 Accepted 都有 `source_span` 或明确允许的 `source_refs`。
+- 每条 Accepted 都有 `created_change_id`。
+- `accepted/changes.jsonl` 至少 10 条，覆盖 `accept_candidate`、`accept_candidate_with_edit`、`manual_create`。
+
+### 10.6 防剧透
+
+必须包含一个明确伏笔链：
+
+- 前文出现“未寄出的名单”，初读时只能作为物品或异常现象。
+- 终章揭示它和暗中分组有关。
+- 前文伏笔解释的 `source_span` 可以指向前文，但 `visible_from` 必须是终章揭示位置或 `v01.epilogue.end`。
+- 当 `read_boundary` 在第一章时，查询不到解释。
+- 当 `current_block` 跳到终章但 `read_boundary` 仍在第一章时，也查询不到解释。
+- 手动确认 `read_boundary` 到终章后，才能查询到解释。
+
+### 10.7 数值
+
+- 至少一个班级点数初始值。
+- 至少一次班级点数变化。
+- 至少一次个人点数变化。
+- 至少一次“知道变化但不知道具体值”的情况，必须进入 OpenQuestion 或 ReviewItem，不生成精确 MetricChange。
+- 缺失值不插值、不推测。
+
+### 10.8 图片
+
+- 至少 3 个占位图片：单人图、合照、场景图。
+- 至少 1 个 `asset_subject` 人工确认。
+- 至少 1 个图片人物识别候选进入 Review，不自动 Accepted。
+
+### 10.9 中日对照
+
+- 至少 4 个 alignment：一对一、一对多、多对一、pending_review。
+- 普通阅读默认只显示 reviewed alignment。
+- pending_review 不默认展示。
+
+### 10.10 Reader / Compiled
+
+`getVisibleContext()` 必须通过：
+
+- 早期 `read_boundary` 不返回后文事件、伏笔解释、后文身份揭示。
+- `current_block` 超过 `read_boundary` 时，`is_ahead_of_boundary = true`，但增强数据仍按 `read_boundary` 过滤。
+- 终章 `read_boundary` 返回伏笔解释。
+- 当前 block 能返回 speaker label、term card、asset。
+- 当前 scene 能返回相关人物和事件。
+- 角色卡返回 `read_boundary` 前最新可见版本。
