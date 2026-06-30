@@ -16,6 +16,7 @@
 - docs/agent-operation-spec-v0.1.md
 - docs/project-prompts-v0.1.md
 - docs/test-book-gray-tower.md
+- docs/phase-5-8-operation-redesign-note.md
 - docs/discussion-archive-2026-06-30.md
 
 审核目标：
@@ -36,6 +37,7 @@
 5. 检查阅读器 read_boundary/current_block、防剧透查询和右侧增强面板规则是否清晰。
 6. 检查测试书《灰塔学院测试卷》是否足以覆盖第一阶段验收。
 7. 找出过度设计、不足设计、模糊点和后续实现风险。
+8. 特别检查阶段 5-8 是否仍误导实现逐候选点击式工作台；若有，应指出并建议改为待讨论状态。
 
 请按以下结构输出审核结果：
 
@@ -72,4 +74,3 @@
 - 以审查、指出风险和提出修订建议为主。
 - 如果某个问题只是推测，请明确标注为推测。
 ```
-

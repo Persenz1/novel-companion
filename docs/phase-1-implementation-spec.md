@@ -22,6 +22,20 @@
 
 - `docs/phase-1-design-decisions-v0.1.md`
 - `docs/compiled-query-spec-v0.1.md`
+- `docs/phase-5-8-operation-redesign-note.md`
+
+## 1.1 当前执行状态
+
+阶段 1-4 已按当前工具链实现和验证。
+
+阶段 5-8 的原始描述仍保留为数据格式和闭环目标，但不再作为逐候选 Web 工作台的直接实现指令。2026-06-30 的原型验证表明，candidate-by-candidate 的人工复核方式无法承受真实长篇制作量。继续编码前，必须先完成阶段 5-8 操作逻辑重构讨论。
+
+在新设计完成前：
+
+- 可以维护 Candidate / Accepted / Review / Compiled 的文件格式和校验规则。
+- 可以使用 fixture 或脚本生成样例数据验证格式。
+- 不应继续实现或优化逐候选卡片式工作台。
+- 不应把“按 block 顺序逐条接受候选”视为最终工作流。
 
 ## 2. 模块顺序
 
@@ -75,6 +89,8 @@ reports/validation_report.json
 
 AI 按 block、scene、章节或用户指定范围生成候选。
 
+状态：格式规则有效；真实交互形态待重构。AI 输出可以继续作为结构化中间层，但 UI 不应默认要求人工逐条处理所有候选。
+
 第一阶段统一写入：
 
 ```text
@@ -88,6 +104,8 @@ candidates/candidates.jsonl
 ### 2.5 内置制作 Agent
 
 清洗后文本操作阶段应提供一个轻量内置 Agent，用来协调 parser、validator、candidate generator、review queue、accepted store 和 compiler。
+
+状态：职责边界有效；具体操作循环待重构。Agent 不应被实现成简单的“候选生成按钮 + 候选卡片列表 + 人工逐条点击”的流程。
 
 第一阶段 Agent 不需要复杂自主规划，但必须具备基础 AI 制作能力：
 
@@ -111,6 +129,8 @@ Agent 不能绕过人工确认直接写 Accepted。详细规则见 `docs/agent-o
 
 工作台主流程按 block 顺序推进。
 
+状态：本小节为早期最小原型设想，已被 2026-06-30 交互验证标记为不足。真实工作台需要重构为更高层级的任务流、批处理确认、异常队列和差异视图。
+
 最小视图：
 
 - 左侧：卷、章节、复核进度、候选队列。
@@ -130,6 +150,8 @@ Agent 不能绕过人工确认直接写 Accepted。详细规则见 `docs/agent-o
 ### 2.7 Accepted 入库
 
 人工确认后写入 `accepted/`，同时写入 `accepted/changes.jsonl`。
+
+状态：审计边界有效；“人工确认”的交互粒度待重构。不能因为避免逐候选点击而放宽 AI 直接写 Accepted 的边界。
 
 AI 不直接写 Accepted。
 

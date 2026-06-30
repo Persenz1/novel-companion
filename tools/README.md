@@ -1,7 +1,8 @@
 # novel-companion tools
 
-第一阶段 bookpack 工具链（Node + TypeScript）。实现 `docs/agent-operation-spec-v0.1.md`
-第 4 节定义的工具接口，逐个补齐第一阶段闭环。
+第一阶段 bookpack 工具链（Node + TypeScript）。
+
+当前工具链覆盖 parser、validator、fixture、compiler 和 query。阶段 5-8 的真实 Agent / 工作台操作逻辑已暂停继续实现，等待 `docs/phase-5-8-operation-redesign-note.md` 中记录的问题讨论完成。
 
 ## 环境
 
@@ -33,9 +34,9 @@ Markdown 卷文件 → `parsed/{blocks,scenes,assets,asset_anchors,alignments}.j
 
 `validate` 跑 manifest / Markdown / Parsed / Accepted / Candidates / Review / Compiled 全套硬校验，写 `reports/validation_report.json`。`error` 阻断 compile，`warning` 不阻断。
 
-### AcceptedStore + ReviewQueue + WorkRunStore（§4.5–4.8，见 `src/stores.ts`）
+### AcceptedStore + ReviewQueue + WorkRunStore（夹具用受控写入路径，见 `src/stores.ts`）
 
-受控写入路径：人工确认后才写 `accepted/*.jsonl` 并同步 `accepted/changes.jsonl`；候选状态、ReviewItem、OpenQuestion、block 进度、work_runs 一并维护。不调用任何模型。
+受控写入路径：人工确认后才写 `accepted/*.jsonl` 并同步 `accepted/changes.jsonl`；候选状态、ReviewItem、OpenQuestion、block 进度、work_runs 一并维护。不调用任何模型。当前主要由 gray-tower fixture 使用，不代表最终工作台交互。
 
 ### Compiler + 查询（§4.7）
 
@@ -47,7 +48,9 @@ Markdown 卷文件 → `parsed/{blocks,scenes,assets,asset_anchors,alignments}.j
 
 ## 待实现
 
-CandidateGenerator、内置制作 Agent（AI 起草层）、最低限度 Markdown 阅读器（UI）。日文 `ja_refs` 来源接入（解析器合并 ja 源）。
+最低限度 Markdown 阅读器（UI）、日文 `ja_refs` 来源接入（解析器合并 ja 源）。
+
+CandidateGenerator、内置制作 Agent 和数据工作台的真实操作形态待重新设计；不要继续沿用逐候选卡片式原型。
 
 ## 开发
 

@@ -699,6 +699,8 @@ deprecate_object
 candidates/candidates.jsonl
 ```
 
+当前状态说明：Candidate JSONL 格式仍然有效，validator 仍按本节校验。2026-06-30 的交互验证只否定“逐候选卡片式复核”作为真实制作主流程，不否定 Candidate 作为 AI 草案、fixture、审计前置和异常记录的中间格式。
+
 通用模板：
 
 ```json
@@ -758,6 +760,8 @@ review_item
 
 Candidate 必须有 `source_span`。`block_id` 是主显示位置，可选；若存在，必须落在 `source_span` 内。复核排序按 `source_span.start_block`、`source_span.end_block`、`candidate.id`。
 
+排序规则只定义数据的时间线组织方式，不要求工作台 UI 必须让人工逐条处理所有 Candidate。
+
 Candidate 状态支持：
 
 ```text
@@ -788,6 +792,8 @@ superseded
 ### 9.1 work_runs.jsonl
 
 `reports/work_runs.jsonl` 记录一次 AI 作业，帮助 Agent 显示已作业和未作业范围。
+
+当前注意：上下文预算应服务作业决策。后续工作台不应只把 token JSON 原样抛给用户，而应提供可读摘要、风险提示和推荐作业范围。
 
 ```json
 {

@@ -2,7 +2,16 @@
 
 本文件用于在新窗口、其他模型或后续工作会话中快速接续项目。每个阶段提示词都包含目标、输入文档、任务范围和验收标准。
 
-使用方式：先复制“通用接手提示词”，再追加对应阶段提示词。
+## 使用规则
+
+先复制“通用接手提示词”，再按任务选择一种提示词，不要混用。
+
+- `0.x 独立提示词`：用于并行分工或只做某个模块，例如只做 Parser、只做测试文本、只做阅读器。它们是模块边界提示词。
+- `1-10 阶段提示词`：用于按第一阶段闭环线性推进。它们是阶段任务提示词。
+- 如果一个任务已经有对应的 `0.x 独立提示词`，优先使用对应独立提示词，不要再叠加相近阶段提示词。
+- 如果是端到端验收，使用阶段十。
+
+当前特别注意：`0.3 清洗后文本操作 Agent` 以及阶段五、阶段六、阶段八已暂停作为实现提示词使用。2026-06-30 的交互验证表明逐候选复核工作台需要重构，继续编码前必须先阅读 `docs/phase-5-8-operation-redesign-note.md` 并完成新的操作逻辑讨论。
 
 ## 0. 通用接手提示词
 
@@ -21,6 +30,7 @@
 - docs/compiled-query-spec-v0.1.md
 - docs/test-book-gray-tower.md
 - docs/discussion-archive-2026-06-30.md
+- docs/phase-5-8-operation-redesign-note.md
 
 项目当前阶段不是做完整桌面应用，而是跑通第一阶段闭环：
 
@@ -35,7 +45,8 @@
 - Accepted 正式数据必须可追溯；默认追溯到中文正文 block，图片主体等例外必须能通过 asset anchor 回到正文位置。
 - 工作台复核最小单位是 block，scene 只作为上下文提示。
 - 第一阶段先用 JSON/JSONL 和 Markdown，不急着上 SQLite 或完整桌面应用。
-- 清洗后文本操作阶段应通过内置制作 Agent 协调工具接口；Agent 应具备基础 AI 制作能力，能按 block/source_span 读取正文、生成结构化候选、显示上下文预算和作业范围，但不能绕过人工确认直接写 Accepted。
+- 清洗后文本操作阶段应通过内置制作 Agent 协调工具接口；Agent 应具备基础 AI 制作能力，能按 block/source_span 读取正文、生成结构化草案、显示上下文预算和作业范围，但不能绕过人工确认直接写 Accepted。
+- 阶段 5-8 的逐候选工作台原型已回滚。不要继续实现 candidate-by-candidate 的复核 UI；先讨论新的批处理、异常队列、差异确认和人工批注流程。
 
 工作时请保持改动聚焦。若需要新增文件，请优先放在 docs/、samples/gray-tower/ 或后续约定的工具目录中。
 ```
@@ -48,7 +59,7 @@
 1. 测试文章/样例 bookpack 任务只改 samples/gray-tower/ 和必要样例数据。
 2. Parser 任务只负责 Markdown -> Parsed JSONL，不写 Accepted。
 3. Validator 任务只负责校验和 reports/validation_report.json，不修改业务数据，除非明确要求实现自动修复。
-4. 内置制作 Agent 任务只设计或实现工具协调层、上下文预算和 AI 候选生成流程，不改变数据格式规范。
+4. 内置制作 Agent 任务当前只做操作逻辑讨论和接口边界整理，不实现逐候选工作台；不得改变数据格式规范。
 5. 阅读器任务只读 manifest、Markdown、Parsed、Compiled 或 mock reader_index，不修改 schema、parser、validator。
 
 如果发现数据格式不够用，先记录到 notes 或报告，不要在实现任务中擅自改 schema。
@@ -85,6 +96,12 @@
 ## 0.3 清洗后文本操作 Agent 独立提示词
 
 ```text
+【暂停使用】
+
+本提示词目前只用于讨论 Agent 边界，不用于直接实现。阶段 5-8 操作逻辑待重构，原因见：
+
+- docs/phase-5-8-operation-redesign-note.md
+
 你只负责设计或实现清洗后文本操作阶段的内置制作 Agent。
 
 请阅读：
@@ -97,11 +114,11 @@
 
 目标：
 
-实现一个轻量 Agent 架构，使它能协调 parser、validator、candidate generator、review queue、accepted store、compiler 等接口，并能对清洗后正文进行基础 AI 结构化制作。
+讨论并重新设计 Agent 架构，使它能协调 parser、validator、candidate generator、review queue、accepted store、compiler 等接口，并能对清洗后正文进行基础 AI 结构化制作，同时避免逐候选点击式工作流。
 
 任务：
 
-1. 设计 Agent 的接口边界：
+1. 先审查并讨论 Agent 的接口边界：
    - FileStore
    - Parser
    - Validator
@@ -109,15 +126,16 @@
    - ReviewQueue
    - AcceptedStore
    - Compiler
-2. 实现或伪实现 Agent 操作循环：
+2. 重新设计或伪实现 Agent 操作循环：
    - 读取当前状态
    - 选择下一步操作
    - 调用工具
    - 读取报告
    - 显示上下文预算、作业范围、已作业 block 和未作业 block
-   - 按 block/source_span 调用 AI 生成候选或复核项
-   - 请求人工确认
-   - 人工确认后写入 Accepted 和 Changes
+   - 按 block/source_span 调用 AI 生成结构化草案或复核项
+   - 聚合候选、摘要、异常和风险，而不是默认逐条候选复核
+   - 请求人工进行 block/range 级裁决、批注或异常确认
+   - 人工确认后通过受控接口写入 Accepted 和 Changes
 3. Agent 可以直接操作 JSONL 或未来数据库适配层，但必须通过接口操作。
 4. Agent 不能绕过人工确认直接写 Accepted。
 5. 高风险内容必须进入人工复核：
@@ -131,13 +149,12 @@
 
 验收：
 
-- Agent 能调用 parser/validator/compiler。
-- Agent 能读取 validation_report 并提出修复建议。
-- Agent 能显示上下文预算和作业范围。
-- Agent 能生成或整理包含 evidence、risk_flags 和 payload.draft 的 Candidates。
-- Agent 能把不确定内容转为 ReviewItem 或 OpenQuestion。
-- Agent 能在人工确认后写 Accepted 和 Change。
-- Agent 不直接越权修改 Accepted。
+- 输出新的阶段 5-8 操作逻辑设计，而不是直接交付 Web 工作台。
+- 说明人工复核的真实操作单位。
+- 说明哪些内容可以批量确认，哪些必须单条确认。
+- 说明 Candidate、ReviewItem、OpenQuestion、Accepted 的转换边界。
+- 说明如何显示上下文预算，使其服务决策而不是成为调试噪声。
+- 保持 AI 不直接越权修改 Accepted。
 ```
 
 ## 0.4 Parser 独立提示词
@@ -399,6 +416,12 @@
 ## 5. 阶段五：生成 AI Candidates 样例
 
 ```text
+【暂停直接实现】
+
+本阶段原本用于生成 AI Candidates 样例。当前可以维护已有 fixture 和数据格式，但不要继续把它扩展成真实制作流程。继续前必须先完成阶段 5-8 操作逻辑重构讨论：
+
+- docs/phase-5-8-operation-redesign-note.md
+
 目标：
 基于《灰塔学院测试卷》生成一批候选数据样例，验证 Candidates 格式和工作台复核流程。
 
@@ -411,8 +434,9 @@
 
 任务：
 
-1. 生成 `samples/gray-tower/candidates/candidates.jsonl`。
-2. 候选类型至少包含：
+1. 如仅为格式夹具，可以生成 `samples/gray-tower/candidates/candidates.jsonl`。
+2. 如为真实操作流设计，不要只生成大量逐条候选；应先设计聚合、批处理和异常队列。
+3. 候选类型至少包含：
    - entity
    - fact
    - event
@@ -425,7 +449,7 @@
    - asset_subject
    - review_item
    - open_question
-3. 每条 Candidate 必须包含：
+4. 每条 Candidate 必须包含：
    - id
    - series_id
    - type
@@ -436,10 +460,10 @@
    - model
    - task_id
    - payload
-4. block_id 只是主显示位置，可选；若存在，必须落在 source_span 内。
-5. 普通 Candidate 的 payload 必须包含 target_type、draft、evidence、risk_flags。
-6. AI 可提出新 entity ID，但不能写 Accepted。
-7. 所有 speaker_label 只作为 Candidate，必须在对话 block 复核时由人工确认后才进入 Accepted。
+5. block_id 只是主显示位置，可选；若存在，必须落在 source_span 内。
+6. 普通 Candidate 的 payload 必须包含 target_type、draft、evidence、risk_flags。
+7. AI 可提出新 entity ID，但不能写 Accepted。
+8. 所有 speaker_label 只作为 Candidate，必须在对话 block 复核时由人工确认后才进入 Accepted。
 
 验收标准：
 
@@ -455,6 +479,10 @@
 ## 6. 阶段六：制作 Accepted 样例数据
 
 ```text
+【暂停直接实现真实工作流】
+
+本阶段仍可通过 fixture 或脚本维护样例 Accepted 数据，用于 validator/compiler/query 测试。但不要把“逐条候选转 Accepted”作为真实制作工作流继续扩展。正式流程待阶段 5-8 讨论后重写。
+
 目标：
 模拟人工复核，把一部分 Candidates 转成 Accepted 数据，并生成 Change 记录。
 
@@ -538,8 +566,12 @@
 ## 8. 阶段八：最小数据工作台原型
 
 ```text
+【已验证不足，暂停继续实现】
+
+2026-06-30 曾实现并回滚候选卡片式 Web 工作台原型。验证结论：真实长篇制作中，按 Candidate 逐条接受/拒绝/转未决的交互成本过高。不要继续按本段实现 Web 工作台；先根据 `docs/phase-5-8-operation-redesign-note.md` 重构操作逻辑。
+
 目标：
-实现最小可用数据工作台，用于按 block 复核 Candidates。
+重新讨论最小可用数据工作台的操作逻辑。早期“按 block 复核 Candidates”的描述只保留为历史设想。
 
 请阅读：
 
@@ -548,28 +580,19 @@
 
 任务：
 
-1. 做一个最小界面或命令行/网页原型。
-2. 左侧显示卷、章节、block 进度。
-3. 中间显示当前 block 和前后上下文。
-4. 右侧显示当前 block/source_span 相关 Candidates。
-5. 支持操作：
-   - accept
-   - edit and accept
-   - reject
-   - merge entity
-   - convert to open question
-   - skip
-   - mark block reviewed
-6. 操作后写入对应 Accepted JSONL、changes.jsonl、Candidate status 和 review/block_progress.jsonl。
+1. 不直接做候选卡片式界面。
+2. 先设计真实制作中的人类操作单位：block、scene、range、异常队列或批处理包。
+3. 设计 AI 输出如何从候选草案聚合为可裁决的操作建议。
+4. 设计人工如何批注、确认、拒绝、延后、拆分和回查。
+5. 设计哪些写入可以批量确认，哪些必须单条确认。
+6. 设计 Accepted 写入和 Change 审计如何保持可追溯。
 
 验收标准：
 
-- 能加载 samples/gray-tower。
-- 能按 source_span.start_block 的正文时间线顺序浏览。
-- 能接受至少一种 candidate 并写入 Accepted。
-- 能生成 Change。
-- 能把不确定候选转为 open_question。
-- 不要求界面美观，优先闭环可用。
+- 产出新的阶段 5-8 工作台/Agent 操作设计。
+- 明确不再采用逐候选点击作为主流程。
+- 明确保留 AI 不直接写 Accepted 的边界。
+- 明确可用样例 bookpack 验证的新闭环。
 ```
 
 ## 9. 阶段九：最小 Markdown 阅读器原型
@@ -617,6 +640,10 @@
 目标：
 完成第一阶段端到端验收，确认制作闭环可跑通。
 
+当前状态：
+
+阶段 5-8 操作逻辑待重构，因此端到端验收不能再要求通过逐候选工作台完成真实复核。可以继续用 fixture 验证数据格式、validator、compiler 和 query；真实人机制作闭环验收需等新操作设计完成。
+
 请阅读全部 docs/*.md，并运行已实现的工具链。
 
 任务：
@@ -625,7 +652,7 @@
 2. 解析 Markdown，生成 Parsed JSONL。
 3. 运行 validator。
 4. 准备 Candidates。
-5. 通过工作台接受一部分候选。
+5. 通过 fixture 或已定案的新工作流接受一部分候选。
 6. 生成 Accepted 和 Changes。
 7. 编译 reader_index.json。
 8. 在阅读器中验证：

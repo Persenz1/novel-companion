@@ -169,6 +169,8 @@ reports/validation_report.json
 
 ## 9. Candidates 校验
 
+本节只定义 Candidate JSONL 的格式和引用完整性校验，不代表最终工作台必须采用逐候选人工点击流程。阶段 5-8 操作逻辑当前待重构。
+
 错误：
 
 - Candidate 缺少 `id`。

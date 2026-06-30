@@ -6,9 +6,11 @@ This repository stores the planning documents and future engineering files for a
 
 ## Current Status
 
-This project is in the phase 1 specification stage.
+This project is in phase 1 toolchain validation.
 
-The current focus is to run a local end-to-end making loop: cleaned Markdown, Parsed JSONL, validation, AI Candidates, block review, Accepted data, Compiled query output, and a minimal Markdown reader.
+Stages 1-4（原创测试书、清洗 Markdown、Parsed JSONL、硬校验）已经按当前工具链推进。Compiled 查询产物和 gray-tower fixture 也可用于验证防剧透查询。
+
+Stages 5-8（AI Candidates、人工复核、Accepted 写入、数据工作台操作流）当前暂停继续实现。一次候选卡片式 Web 工作台原型验证后，项目决定先重构清洗后数据操作逻辑，避免真实长篇制作落入逐候选点击的高工作量流程。
 
 ## Core Idea
 
@@ -34,7 +36,7 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 - [Project Prompts v0.1](docs/project-prompts-v0.1.md)
 - [Project Audit Prompt v0.1](docs/project-audit-prompt-v0.1.md)
 - [Gray Tower Test Book](docs/test-book-gray-tower.md)
+- [Phase 5-8 Operation Redesign Note](docs/phase-5-8-operation-redesign-note.md)
 - [Discussion Archive 2026-06-30](docs/discussion-archive-2026-06-30.md)
 - [Requirements v0.2 historical draft](docs/requirements-v0.2.md)
 - [Requirements v0.1 historical draft](docs/requirements-v0.1.md)
-
