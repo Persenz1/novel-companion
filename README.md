@@ -10,7 +10,7 @@ This project is in phase 1 toolchain validation.
 
 Stages 1-4（原创测试书、清洗 Markdown、Parsed JSONL、硬校验）已经按当前工具链推进。Compiled 查询产物和 gray-tower fixture 也可用于验证防剧透查询。
 
-Stages 5-8（AI Candidates、人工复核、Accepted 写入、数据工作台操作流）当前暂停继续实现。一次候选卡片式 Web 工作台原型验证后，项目决定先重构清洗后数据操作逻辑，避免真实长篇制作落入逐候选点击的高工作量流程。
+Stages 5-8（AI Candidates、复核、Accepted 写入、数据工作台操作流）已按「AI 起草 + 独立 AI 复核 + 人审计异常」架构实现为图形化数据工作台（`tools/`，`npm run workbench`），见 [Post-cleaning Operation Design v0.2](docs/post-cleaning-operation-design-v0.2.md)。三栏界面：左选章节范围 + 配置 API、中逐 block、右看标识 / 异常队列 / 审计回滚。读写全链路已用 gray-tower 验证，实际 LLM 调用待接入 API key。
 
 ## Core Idea
 
@@ -36,6 +36,7 @@ The system is not just an EPUB reader. It is a local desktop reading companion f
 - [Project Prompts v0.1](docs/project-prompts-v0.1.md)
 - [Project Audit Prompt v0.1](docs/project-audit-prompt-v0.1.md)
 - [Gray Tower Test Book](docs/test-book-gray-tower.md)
+- [Post-cleaning Operation Design v0.2](docs/post-cleaning-operation-design-v0.2.md)
 - [Phase 5-8 Operation Redesign Note](docs/phase-5-8-operation-redesign-note.md)
 - [Discussion Archive 2026-06-30](docs/discussion-archive-2026-06-30.md)
 - [Requirements v0.2 historical draft](docs/requirements-v0.2.md)

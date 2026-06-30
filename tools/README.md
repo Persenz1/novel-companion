@@ -2,7 +2,7 @@
 
 第一阶段 bookpack 工具链（Node + TypeScript）。
 
-当前工具链覆盖 parser、validator、fixture、compiler 和 query。阶段 5-8 的真实 Agent / 工作台操作逻辑已暂停继续实现，等待 `docs/phase-5-8-operation-redesign-note.md` 中记录的问题讨论完成。
+当前工具链覆盖 parser、validator、fixture、compiler、query，以及清洗后制作阶段的数据工作台（`npm run workbench`）。工作台按 `docs/post-cleaning-operation-design-v0.2.md` 实现：AI 起草 + 独立 AI 复核自动落盘 + 人审计异常。
 
 ## 环境
 
@@ -46,11 +46,28 @@ Markdown 卷文件 → `parsed/{blocks,scenes,assets,asset_anchors,alignments}.j
 
 替代第一阶段尚未实现的 AI 制作 Agent：编写候选集并通过真实写入接口重放一次人工复核，确定性地生成 candidates + accepted + review + work_runs。满足测试书 §10.4/§10.5 计数与 §10.6/§10.10 防剧透用例。
 
+## 数据工作台（清洗后制作阶段，§ post-cleaning-operation-design-v0.2）
+
+图形化三栏工作台，AI 全程驱动 + AI 复核 + 人审计异常：
+
+```bash
+npm run workbench          # 默认 http://localhost:4173，可用 NC_PORT 覆盖
+```
+
+浏览器打开后：
+
+1. **设置**（左栏）：填数据包目录（含 manifest.json）、起草模型、复核模型。采用 OpenAI 通用协议（`/chat/completions`），DeepSeek / MiMo 等兼容供应商直接可用；复核模型应不同于起草模型。API key 只存本地 `tools/.workbench-config.json`（已 gitignore，不提交、不进数据包、不回传给前端明文）。
+2. **左栏**：按章节选择 AI 生成范围（起草/复核以整章为单位）。
+3. **中栏**：逐 block 展示正文，每段带「确认 / 候选 / 异常」标识数。
+4. **右栏**：点开某 block 看它身上的全部标识；另有「异常队列」（人工裁决升级项）和「审计 / 回滚」（按 Change 撤销）两个标签页。
+
+流水线：`起草`（起草模型抽候选）→ `复核`（复核模型独立路由：低风险自动落盘 + Change、高风险升级进异常队列、无依据拒绝）。每次自动写入都生成可回滚 Change（单对象 / 整批 work_run）。
+
+模块：`src/server.ts`（HTTP）、`src/agent/{config,llm,prompts,drafter…pipeline,agentStore,workbenchData}.ts`、`web/`（原生 ESM 前端，无构建步骤）。
+
 ## 待实现
 
 最低限度 Markdown 阅读器（UI）、日文 `ja_refs` 来源接入（解析器合并 ja 源）。
-
-CandidateGenerator、内置制作 Agent 和数据工作台的真实操作形态待重新设计；不要继续沿用逐候选卡片式原型。
 
 ## 开发
 

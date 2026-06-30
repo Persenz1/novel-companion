@@ -11,7 +11,7 @@
 - 如果一个任务已经有对应的 `0.x 独立提示词`，优先使用对应独立提示词，不要再叠加相近阶段提示词。
 - 如果是端到端验收，使用阶段十。
 
-当前特别注意：`0.3 清洗后文本操作 Agent` 以及阶段五、阶段六、阶段八已暂停作为实现提示词使用。2026-06-30 的交互验证表明逐候选复核工作台需要重构，继续编码前必须先阅读 `docs/phase-5-8-operation-redesign-note.md` 并完成新的操作逻辑讨论。
+当前特别注意：阶段 5-8 清洗后操作逻辑已重构定案，见 `docs/post-cleaning-operation-design-v0.2.md`（AI 驱动 + 独立 AI 复核 + 人审计异常，取代旧的逐候选工作台）。`0.3 清洗后文本操作 Agent` 以及阶段五、阶段六、阶段八的提示词已按 v0.2 口径更新，实现前必须先读该设计文档。
 
 ## 0. 通用接手提示词
 
@@ -31,6 +31,7 @@
 - docs/test-book-gray-tower.md
 - docs/discussion-archive-2026-06-30.md
 - docs/phase-5-8-operation-redesign-note.md
+- docs/post-cleaning-operation-design-v0.2.md
 
 项目当前阶段不是做完整桌面应用，而是跑通第一阶段闭环：
 
@@ -40,13 +41,11 @@
 
 - 中文文本是唯一主轴。
 - 日文只作为参考渲染内容，不进入主操作链。
-- 防剧透查询使用 read_boundary，不直接使用 current_block 放宽边界。
-- AI 可以写 Candidates、ReviewItems 和 OpenQuestions，但不能绕过人工确认写 Accepted。
+- 阅读器查询使用 read_boundary 过滤增强数据（既有机制）。防剧透不是核心卖点；清洗后制作阶段由分卷逐本录入天然约束剧透风险，不对每条草案设严格剧透闸门，详见 `docs/post-cleaning-operation-design-v0.2.md` §5。
+- 清洗后操作采用「AI 起草 + 独立 AI 复核 + 人审计异常」：AI 经复核后可自动写 Accepted，但每次写入必须是可追溯、可回滚的 Change，且规定的高风险类别（实体合并、歧义说话人、关系变化、伏笔/隐藏身份、数值冲突、图中人物身份）必须升级给人裁决。
 - Accepted 正式数据必须可追溯；默认追溯到中文正文 block，图片主体等例外必须能通过 asset anchor 回到正文位置。
-- 工作台复核最小单位是 block，scene 只作为上下文提示。
 - 第一阶段先用 JSON/JSONL 和 Markdown，不急着上 SQLite 或完整桌面应用。
-- 清洗后文本操作阶段应通过内置制作 Agent 协调工具接口；Agent 应具备基础 AI 制作能力，能按 block/source_span 读取正文、生成结构化草案、显示上下文预算和作业范围，但不能绕过人工确认直接写 Accepted。
-- 阶段 5-8 的逐候选工作台原型已回滚。不要继续实现 candidate-by-candidate 的复核 UI；先讨论新的批处理、异常队列、差异确认和人工批注流程。
+- 不要实现 candidate-by-candidate 的逐候选复核 UI（旧方案已回滚）。人的主操作面是异常队列 + Change 审计 + 整批回滚，不是逐条候选按钮。
 
 工作时请保持改动聚焦。若需要新增文件，请优先放在 docs/、samples/gray-tower/ 或后续约定的工具目录中。
 ```
@@ -59,7 +58,7 @@
 1. 测试文章/样例 bookpack 任务只改 samples/gray-tower/ 和必要样例数据。
 2. Parser 任务只负责 Markdown -> Parsed JSONL，不写 Accepted。
 3. Validator 任务只负责校验和 reports/validation_report.json，不修改业务数据，除非明确要求实现自动修复。
-4. 内置制作 Agent 任务当前只做操作逻辑讨论和接口边界整理，不实现逐候选工作台；不得改变数据格式规范。
+4. 内置制作 Agent 任务按 `docs/post-cleaning-operation-design-v0.2.md` 实现起草/复核/自动写入/回滚接口，不实现逐候选工作台；不得擅自改变数据格式规范。
 5. 阅读器任务只读 manifest、Markdown、Parsed、Compiled 或 mock reader_index，不修改 schema、parser、validator。
 
 如果发现数据格式不够用，先记录到 notes 或报告，不要在实现任务中擅自改 schema。
@@ -96,17 +95,12 @@
 ## 0.3 清洗后文本操作 Agent 独立提示词
 
 ```text
-【暂停使用】
+你负责实现清洗后文本操作阶段的内置制作 Agent，采用 AI 驱动 + 独立 AI 复核 + 人审计异常的架构。
 
-本提示词目前只用于讨论 Agent 边界，不用于直接实现。阶段 5-8 操作逻辑待重构，原因见：
+请先阅读（设计以 v0.2 为准）：
 
-- docs/phase-5-8-operation-redesign-note.md
-
-你只负责设计或实现清洗后文本操作阶段的内置制作 Agent。
-
-请阅读：
-
-- docs/agent-operation-spec-v0.1.md
+- docs/post-cleaning-operation-design-v0.2.md   ← 操作逻辑定案，最优先
+- docs/agent-operation-spec-v0.1.md             ← 工具接口与安全边界（逐候选章节已被 v0.2 取代）
 - docs/workflow-spec-v0.1.md
 - docs/data-format-v0.1.md
 - docs/validation-spec-v0.1.md
@@ -114,47 +108,40 @@
 
 目标：
 
-讨论并重新设计 Agent 架构，使它能协调 parser、validator、candidate generator、review queue、accepted store、compiler 等接口，并能对清洗后正文进行基础 AI 结构化制作，同时避免逐候选点击式工作流。
+实现双 AI 流水线，使清洗后正文能被自动结构化制作，人只做异常裁决和审计，不做逐候选点击。
 
 任务：
 
-1. 先审查并讨论 Agent 的接口边界：
-   - FileStore
-   - Parser
-   - Validator
-   - CandidateGenerator
-   - ReviewQueue
-   - AcceptedStore
-   - Compiler
-2. 重新设计或伪实现 Agent 操作循环：
-   - 读取当前状态
-   - 选择下一步操作
-   - 调用工具
-   - 读取报告
-   - 显示上下文预算、作业范围、已作业 block 和未作业 block
-   - 按 block/source_span 调用 AI 生成结构化草案或复核项
-   - 聚合候选、摘要、异常和风险，而不是默认逐条候选复核
-   - 请求人工进行 block/range 级裁决、批注或异常确认
-   - 人工确认后通过受控接口写入 Accepted 和 Changes
-3. Agent 可以直接操作 JSONL 或未来数据库适配层，但必须通过接口操作。
-4. Agent 不能绕过人工确认直接写 Accepted。
-5. 高风险内容必须进入人工复核：
-   - 新实体确认
-   - 实体合并
-   - 说话人歧义
-   - 关系变化
-   - 伏笔/隐藏身份
-   - 数值冲突
-   - 图片人物识别
+1. 起草 Agent（Drafter）：按选定 range 读正文 + 受控上下文，调用 AI 生成结构化草案，
+   写入 candidates/candidates.jsonl（候选作为内部中间格式），带 confidence 和 risk_flags。
+2. 复核 Agent（Reviewer）：对每条草案做独立一次推理（独立 prompt/上下文/独立模型），
+   核对正文依据、与已有 Accepted 的一致性、叙述正确性，判定路由：
+   - 通过且低风险      -> 自动写 Accepted + Change（标记 auto_accepted、reviewer_model、work_run_id）
+   - 通过但属升级清单  -> 进异常队列（ReviewItem），等人裁决
+   - 不通过            -> 拒绝或退回起草，记录原因
+   路由靠复核 Agent 的自然语言判断（证据是否充分 + 是否属高风险类别），不设数值置信阈值。
+3. 必须升级给人裁决的高风险类别：实体合并、歧义说话人、关系变化、
+   伏笔/隐藏身份/误导叙述、数值冲突或与已有 Accepted 冲突、图片人物身份识别、复核自身拿不准的草案。
+4. 受控自动写入：autoAccept 必须强制生成 Change；提供三级回滚（单对象 / 单 Change / 整批 work_run）。
+5. 模型配置：起草与复核各配一个模型、可跨厂商（如起草 ds4flash、复核 dsv4pro 或 mimov2.5），
+   复核模型必须不同于起草模型；换模型只改本地配置不改流程。无信任档位、无数值阈值。
+6. 写 work_run，记录范围、上下文预算、自动/升级/拒绝计数与 drafter_model/reviewer_model。
+7. 防剧透轻量处理：visible_from 按草案自身位置生成，不设严格剧透闸门（v0.2 §5）。
+8. 触发 compiler 重新生成 reader_index。
+
+边界：
+
+- 不实现 candidate-by-candidate 的逐候选复核 UI。
+- 人的主操作面是异常队列 + Change 审计 + 整批回滚。
+- 复核 Agent 不能是起草同一次调用的顺手自查。
+- 自动写入必须可追溯、可回滚。
 
 验收：
 
-- 输出新的阶段 5-8 操作逻辑设计，而不是直接交付 Web 工作台。
-- 说明人工复核的真实操作单位。
-- 说明哪些内容可以批量确认，哪些必须单条确认。
-- 说明 Candidate、ReviewItem、OpenQuestion、Accepted 的转换边界。
-- 说明如何显示上下文预算，使其服务决策而不是成为调试噪声。
-- 保持 AI 不直接越权修改 Accepted。
+- 起草 -> 复核 -> 自动落盘 -> 异常升级 -> 回滚 全链路能用 gray-tower 夹具跑通。
+- 自动写入的 Accepted 每条都有对应 Change，且能按对象/Change/work_run 回滚。
+- 升级项带人话决策信息（为什么需要你看 + 正文片段 + 推荐操作 + 冲突对象）。
+- 起草与复核模型分离可配，复核模型不同于起草模型；实体合并始终人裁决。
 ```
 
 ## 0.4 Parser 独立提示词
@@ -416,11 +403,9 @@
 ## 5. 阶段五：生成 AI Candidates 样例
 
 ```text
-【暂停直接实现】
+【按 v0.2 实施】
 
-本阶段原本用于生成 AI Candidates 样例。当前可以维护已有 fixture 和数据格式，但不要继续把它扩展成真实制作流程。继续前必须先完成阶段 5-8 操作逻辑重构讨论：
-
-- docs/phase-5-8-operation-redesign-note.md
+本阶段生成 AI Candidates。候选已定位为「起草 Agent 到复核 Agent」之间的内部中间格式，不是人工逐条点击的对象。实现前先读 `docs/post-cleaning-operation-design-v0.2.md`，候选由起草 Agent 产出后交复核 Agent 路由（自动落盘 / 升级 / 拒绝）。fixture 仍可用于格式验证。
 
 目标：
 基于《灰塔学院测试卷》生成一批候选数据样例，验证 Candidates 格式和工作台复核流程。
@@ -479,9 +464,9 @@
 ## 6. 阶段六：制作 Accepted 样例数据
 
 ```text
-【暂停直接实现真实工作流】
+【按 v0.2 实施】
 
-本阶段仍可通过 fixture 或脚本维护样例 Accepted 数据，用于 validator/compiler/query 测试。但不要把“逐条候选转 Accepted”作为真实制作工作流继续扩展。正式流程待阶段 5-8 讨论后重写。
+本阶段把候选转为 Accepted 数据。真实流程由复核 Agent 自动写入（经独立复核、生成 Change、可回滚），高风险类别升级给人裁决，不再是「逐条候选转 Accepted」。实现前先读 `docs/post-cleaning-operation-design-v0.2.md`。fixture 仍可用于 validator/compiler/query 测试。
 
 目标：
 模拟人工复核，把一部分 Candidates 转成 Accepted 数据，并生成 Change 记录。
@@ -566,12 +551,12 @@
 ## 8. 阶段八：最小数据工作台原型
 
 ```text
-【已验证不足，暂停继续实现】
+【按 v0.2 实施】
 
-2026-06-30 曾实现并回滚候选卡片式 Web 工作台原型。验证结论：真实长篇制作中，按 Candidate 逐条接受/拒绝/转未决的交互成本过高。不要继续按本段实现 Web 工作台；先根据 `docs/phase-5-8-operation-redesign-note.md` 重构操作逻辑。
+2026-06-30 曾实现并回滚候选卡片式 Web 工作台原型（逐候选交互成本过高）。新工作台按 `docs/post-cleaning-operation-design-v0.2.md` §10 设计：围绕作业控制台、异常队列、Change 审计/差异视图、可选 scene digest，而不是候选卡片列表。CLI 优先（draft/review/queue/audit/revert），Web 是后续增强。
 
 目标：
-重新讨论最小可用数据工作台的操作逻辑。早期“按 block 复核 Candidates”的描述只保留为历史设想。
+按 v0.2 实现工作台的人工接触面，人的主操作是异常裁决 + 审计 + 整批回滚。
 
 请阅读：
 
@@ -591,7 +576,7 @@
 
 - 产出新的阶段 5-8 工作台/Agent 操作设计。
 - 明确不再采用逐候选点击作为主流程。
-- 明确保留 AI 不直接写 Accepted 的边界。
+- 明确保留「AI 不静默写 Accepted」的边界：独立复核通过可自动落盘，但必须生成 Change、记录 reviewer_model/work_run_id，并可回滚。
 - 明确可用样例 bookpack 验证的新闭环。
 ```
 
@@ -642,7 +627,7 @@
 
 当前状态：
 
-阶段 5-8 操作逻辑待重构，因此端到端验收不能再要求通过逐候选工作台完成真实复核。可以继续用 fixture 验证数据格式、validator、compiler 和 query；真实人机制作闭环验收需等新操作设计完成。
+阶段 5-8 操作逻辑已按 `docs/post-cleaning-operation-design-v0.2.md` 定案。端到端验收不通过逐候选工作台，而是验证「起草→独立复核→自动落盘→异常升级→回滚」闭环；fixture 仍可用于数据格式、validator、compiler 和 query 验证。
 
 请阅读全部 docs/*.md，并运行已实现的工具链。
 

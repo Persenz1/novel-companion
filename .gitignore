@@ -29,3 +29,6 @@ data/private/
 # Node toolchain
 node_modules/
 dist/
+
+# Local workbench config (holds API keys; never commit)
+tools/.workbench-config.json

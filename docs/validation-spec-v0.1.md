@@ -1,5 +1,7 @@
 # 校验规格 v0.1
 
+> 2026-06-30 状态覆盖：阶段 5-8 清洗后操作逻辑已由 `docs/post-cleaning-operation-design-v0.2.md` 定案。凡本文仍出现「逐候选人工复核」「AI 不得写 Accepted」「待重构 / 暂停实现」等旧口径，均以 v0.2 为准：AI 起草 + 独立 AI 复核后可自动写 Accepted，但必须生成可追溯、可回滚 Change，高风险项升级给人裁决。
+
 ## 1. 目标
 
 校验器负责保证数据包不会以损坏、不一致或突破防剧透边界的状态进入下一阶段。
@@ -169,7 +171,7 @@ reports/validation_report.json
 
 ## 9. Candidates 校验
 
-本节只定义 Candidate JSONL 的格式和引用完整性校验，不代表最终工作台必须采用逐候选人工点击流程。阶段 5-8 操作逻辑当前待重构。
+本节只定义 Candidate JSONL 的格式和引用完整性校验，不代表最终工作台必须采用逐候选人工点击流程。阶段 5-8 操作逻辑以 `docs/post-cleaning-operation-design-v0.2.md` 为准。
 
 错误：
 

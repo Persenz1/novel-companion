@@ -1,5 +1,7 @@
 # 长篇系列小说交互式阅读增强系统需求定义 v0.3
 
+> 2026-06-30 状态覆盖：阶段 5-8 清洗后操作逻辑已由 `docs/post-cleaning-operation-design-v0.2.md` 定案。凡本文仍出现「逐候选人工复核」「AI 不得写 Accepted」「待重构 / 暂停实现」等旧口径，均以 v0.2 为准：AI 起草 + 独立 AI 复核后可自动写 Accepted，但必须生成可追溯、可回滚 Change，高风险项升级给人裁决。
+
 ## 1. 项目定位
 
 本项目是面向长篇系列小说的本地交互式阅读增强系统。
@@ -69,7 +71,7 @@
 3. Parsed JSONL 生成。
 4. 硬校验。
 5. AI Candidates JSONL 模板。
-6. 按 block 复核工作台。
+6. AI 起草 + 独立 AI 复核工作台。
 7. Accepted / Change / OpenQuestion 入库。
 8. Compiled 查询。
 9. 最低限度 Markdown 阅读器。
@@ -78,9 +80,9 @@
 
 阶段 1-4（测试书、清洗 Markdown、Parsed 生成、硬校验）已按当前工具链推进。
 
-阶段 5-8（AI Candidates、人工复核、Accepted 写入、数据工作台相关操作流）在一次 Web 工作台原型验证后暂停继续实现。验证结论是：如果按“AI 生成大量候选 -> 人工逐条点击接受/拒绝/转换”的 candidate-centric 模式处理真实长篇小说，制作工作量会过大，交互负担会集中在低层候选微操作上。
+阶段 5-8（AI Candidates、复核、Accepted 写入、数据工作台相关操作流）曾在一次候选卡片式 Web 工作台原型验证后暂停。验证结论是：如果按“AI 生成大量候选 -> 人工逐条点击接受/拒绝/转换”的 candidate-centric 模式处理真实长篇小说，制作工作量会过大，交互负担会集中在低层候选微操作上。
 
-因此，阶段 5-8 当前不是继续完善逐候选工作台，而是先重构清洗后数据操作逻辑。新的方案应优先讨论 block/range 级批处理、异常队列、差异确认、低摩擦人工批注和 Agent 结构化落盘方式。详见 `docs/phase-5-8-operation-redesign-note.md`。
+当前结论已落到 `docs/post-cleaning-operation-design-v0.2.md`：保留 Candidates 作为起草到复核之间的内部中间格式；由起草 Agent 生成草案、独立复核 Agent 路由，低风险自动写 Accepted + Change，高风险进入异常队列，人负责异常裁决和 Change 审计。
 
 ## 5. 数据包类型
 
@@ -132,7 +134,7 @@
 
 ## 8. AI 边界
 
-AI 不直接修改正式数据。AI 的结构化输出默认进入 Candidates；不确定、冲突、长期悬而未决或需要后文回查的内容可以进入 ReviewItems 或 OpenQuestions。
+AI 的结构化输出默认先进入 Candidates；不确定、冲突、长期悬而未决或需要后文回查的内容可以进入 ReviewItems 或 OpenQuestions。
 
 AI 输出必须带：
 
@@ -143,13 +145,13 @@ AI 输出必须带：
 - 任务类型
 - 模型信息
 
-人工接受、修改或拒绝后，结果才进入 Accepted，并生成 Change 记录。Accepted 是阅读器信任的正式数据，不能由 AI 静默写入。
+v0.2 后，AI 可在**独立复核通过**后自动写入 Accepted，但不能静默写入：每次写入都必须生成 Change，标记 `decided_by`、`auto_accepted`、`reviewer_model`、`work_run_id`，并支持单 Change / 整批 work_run 回滚。实体合并、歧义说话人、关系变化、伏笔/隐藏身份、数值冲突、图片人物身份等高风险项必须升级给人裁决。
 
 ## 9. Agent 驱动的数据制作原则
 
 数据工作台不是 AI 聊天入口，而是 Agent 驱动的制作系统。
 
-当前注意：本节描述的是 Agent 的职责边界和长期原则，不再等同于“按候选卡片逐条复核”的 UI 实现方案。逐候选点击式原型已回滚，阶段 5-8 的实际操作形态待重新设计。
+当前注意：本节描述的是 Agent 的职责边界和长期原则。真实工作台已按 `docs/post-cleaning-operation-design-v0.2.md` 改为作业控制台、异常队列、Change 审计和回滚，而不是按候选卡片逐条复核。
 
 项目不应依赖“每次打开一个 chatbox，手工粘贴大量上下文和 schema，再把结果搬回项目”的工作方式。清洗后的文本操作阶段应由内置制作 Agent 负责协调上下文、工具接口和数据状态。
 
@@ -158,9 +160,9 @@ AI 输出必须带：
 - 读取当前 bookpack 的 manifest、Parsed、Candidates、Review、Accepted 和 Reports。
 - 检索当前 block、scene、已确认实体、事实、事件、关系、数值、角色卡和未决问题。
 - 调用 parser、validator、candidate generator、review queue、accepted store 和 compiler。
-- 为每个 block 生成候选、风险提示和建议操作。
-- 自主把低置信、冲突、主观判断、图片人物识别、伏笔和隐藏身份等内容推给人工复核。
-- 在人工确认后执行结构化写入，并生成 Change。
+- 为所选章节/范围生成候选、风险提示和建议操作。
+- 用独立复核模型核对草案，低风险自动落盘，高风险升级给人工复核。
+- 执行结构化写入时同步生成 Change，并提供审计和回滚。
 
 聊天可以作为解释、辅助和调试界面，但主流程必须是结构化任务、候选、复核、写入和审计。人类制作者的核心职责是复核和裁决，而不是反复搬运上下文或手工拼接 JSON。
 

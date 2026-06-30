@@ -9,8 +9,9 @@
   },
   "scripts": {
     "parse": "tsx src/cli.ts parse",
+    "workbench": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "engines": {
     "node": ">=20"

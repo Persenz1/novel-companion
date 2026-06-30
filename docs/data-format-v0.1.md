@@ -1,5 +1,7 @@
 # 数据格式规格 v0.1
 
+> 2026-06-30 状态覆盖：阶段 5-8 清洗后操作逻辑已由 `docs/post-cleaning-operation-design-v0.2.md` 定案。凡本文仍出现「逐候选人工复核」「AI 不得写 Accepted」「待重构 / 暂停实现」等旧口径，均以 v0.2 为准：AI 起草 + 独立 AI 复核后可自动写 Accepted，但必须生成可追溯、可回滚 Change，高风险项升级给人裁决。
+
 ## 1. 目录结构
 
 推荐工程包结构：
@@ -633,7 +635,7 @@ system
 ambiguous
 ```
 
-所有 `speaker_label` 都必须在对话 block 复核时由人工确认后进入 Accepted。AI 只能生成 `speaker_label` Candidate；阅读器不展示高置信 Candidate。
+歧义 `speaker_label` 必须升级给人；无歧义单说话人可经独立复核后自动进入 Accepted。阅读器只展示 Accepted speaker_labels，不展示未落盘 Candidate。
 
 ### 7.12 asset_subjects.jsonl
 
@@ -690,6 +692,17 @@ manual_update
 merge_entities
 deprecate_object
 ```
+
+v0.2 自动落盘扩展字段（向后兼容）：
+
+```text
+decided_by       reviewer_agent | user
+auto_accepted    boolean
+reviewer_model   string
+work_run_id      string
+```
+
+经独立复核自动写入的 Change 必须包含这些字段；旧人工记录未包含时视为 `decided_by: "user"`。
 
 ## 8. Candidates
 

@@ -1,17 +1,30 @@
-// Closed-loop integration test over the gray-tower fixture: compiles the
-// reader index from the on-disk pack and asserts the spoiler + relevance
-// behaviour from docs/test-book-gray-tower.md §10.6/§10.10.
+// Closed-loop integration test over the gray-tower fixture: asserts the spoiler
+// + relevance behaviour from docs/test-book-gray-tower.md §10.6/§10.10.
 //
-// Assumes the pack has been parsed + fixture-built + validated:
-//   npx tsx scripts/gray-tower-fixture.ts ../samples/gray-tower
-//   npx tsx src/cli.ts validate ../samples/gray-tower
+// The committed pack is at the post-cleaning state (no analysis data — the real
+// analysis is produced live by the workbench). To stay self-contained, this test
+// copies the pack to a temp dir, replays the deterministic fixture (no model) to
+// rebuild candidates/accepted/review, validates, then compiles + queries.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { cpSync, mkdtempSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { FileStore } from "./fileStore.js";
 import { Compiler } from "./compiler.js";
 import { CompiledQuery } from "./query.js";
 
-const store = new FileStore(new URL("../../samples/gray-tower", import.meta.url).pathname);
+const toolsRoot = fileURLToPath(new URL("../", import.meta.url));
+const srcPack = fileURLToPath(new URL("../../samples/gray-tower", import.meta.url));
+const tmpPack = mkdtempSync(path.join(os.tmpdir(), "gt-fixture-"));
+cpSync(srcPack, tmpPack, { recursive: true });
+const run = (args: string[]) => execFileSync("npx", ["tsx", ...args], { cwd: toolsRoot, stdio: "ignore" });
+run(["scripts/gray-tower-fixture.ts", tmpPack]); // rebuild deterministic analysis
+run(["src/cli.ts", "validate", tmpPack]); // regenerate validation_report
+
+const store = new FileStore(tmpPack);
 const index = new Compiler(store).compileReaderIndex();
 const q = new CompiledQuery(index);
 

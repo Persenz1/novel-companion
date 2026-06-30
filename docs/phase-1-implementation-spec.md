@@ -1,5 +1,7 @@
 # 第一阶段实现规格
 
+> 2026-06-30 状态覆盖：阶段 5-8 清洗后操作逻辑已由 `docs/post-cleaning-operation-design-v0.2.md` 定案。凡本文仍出现「逐候选人工复核」「AI 不得写 Accepted」「待重构 / 暂停实现」等旧口径，均以 v0.2 为准：AI 起草 + 独立 AI 复核后可自动写 Accepted，但必须生成可追溯、可回滚 Change，高风险项升级给人裁决。
+
 ## 1. 目标
 
 第一阶段只追求跑通制作闭环，不追求完整桌面应用体验。
@@ -12,7 +14,7 @@
 -> Parsed JSONL
 -> 硬校验
 -> AI Candidates
--> block 复核工作台
+-> 独立 AI 复核 / 异常队列
 -> Accepted 数据
 -> Compiled 查询产物
 -> Markdown 阅读器
@@ -22,20 +24,21 @@
 
 - `docs/phase-1-design-decisions-v0.1.md`
 - `docs/compiled-query-spec-v0.1.md`
-- `docs/phase-5-8-operation-redesign-note.md`
+- `docs/post-cleaning-operation-design-v0.2.md`
 
 ## 1.1 当前执行状态
 
 阶段 1-4 已按当前工具链实现和验证。
 
-阶段 5-8 的原始描述仍保留为数据格式和闭环目标，但不再作为逐候选 Web 工作台的直接实现指令。2026-06-30 的原型验证表明，candidate-by-candidate 的人工复核方式无法承受真实长篇制作量。继续编码前，必须先完成阶段 5-8 操作逻辑重构讨论。
+阶段 5-8 的原始描述仍保留为数据格式和闭环目标，但不再作为逐候选 Web 工作台的直接实现指令。2026-06-30 的原型验证表明，candidate-by-candidate 的人工复核方式无法承受真实长篇制作量；当前已按 `docs/post-cleaning-operation-design-v0.2.md` 改为 AI 起草 + 独立 AI 复核 + 人审计异常。
 
-在新设计完成前：
+当前执行规则：
 
 - 可以维护 Candidate / Accepted / Review / Compiled 的文件格式和校验规则。
 - 可以使用 fixture 或脚本生成样例数据验证格式。
 - 不应继续实现或优化逐候选卡片式工作台。
 - 不应把“按 block 顺序逐条接受候选”视为最终工作流。
+- 工作台以章节/范围作业、异常队列、Change 审计和回滚为主。
 
 ## 2. 模块顺序
 
@@ -89,7 +92,7 @@ reports/validation_report.json
 
 AI 按 block、scene、章节或用户指定范围生成候选。
 
-状态：格式规则有效；真实交互形态待重构。AI 输出可以继续作为结构化中间层，但 UI 不应默认要求人工逐条处理所有候选。
+状态：格式规则有效。AI 输出作为起草 Agent 到复核 Agent 之间的结构化中间层，UI 不应默认要求人工逐条处理所有候选。
 
 第一阶段统一写入：
 
@@ -105,7 +108,7 @@ candidates/candidates.jsonl
 
 清洗后文本操作阶段应提供一个轻量内置 Agent，用来协调 parser、validator、candidate generator、review queue、accepted store 和 compiler。
 
-状态：职责边界有效；具体操作循环待重构。Agent 不应被实现成简单的“候选生成按钮 + 候选卡片列表 + 人工逐条点击”的流程。
+状态：职责边界有效；具体操作循环按 v0.2 实施。Agent 不应被实现成简单的“候选生成按钮 + 候选卡片列表 + 人工逐条点击”的流程。
 
 第一阶段 Agent 不需要复杂自主规划，但必须具备基础 AI 制作能力：
 
@@ -118,18 +121,18 @@ candidates/candidates.jsonl
 - 为候选生成 source_span、visible_from、confidence、evidence、risk_flags 和 payload.draft。
 - 校验候选引用和格式。
 - 按正文时间线组织复核队列。
-- 主动把低置信、冲突、主观判断和高剧透风险内容交给人工复核。
-- 在人工确认后写入 Accepted 和 Changes。
+- 使用独立复核模型路由候选：低风险自动写 Accepted + Change，高风险进入异常队列。
+- 支持人工裁决升级项，并写入 Accepted 和 Changes。
 - 更新 Candidate status 和 block_progress。
 - 调用 compiler 生成 reader_index。
 
-Agent 不能绕过人工确认直接写 Accepted。详细规则见 `docs/agent-operation-spec-v0.1.md`。
+Agent 不能静默写 Accepted；经独立 AI 复核的低风险草案可以自动写 Accepted，但必须生成 Change 并可回滚。详细规则以 `docs/post-cleaning-operation-design-v0.2.md` 为准。
 
 ### 2.6 数据工作台
 
 工作台主流程按 block 顺序推进。
 
-状态：本小节为早期最小原型设想，已被 2026-06-30 交互验证标记为不足。真实工作台需要重构为更高层级的任务流、批处理确认、异常队列和差异视图。
+状态：本小节为早期最小原型设想，已被 2026-06-30 交互验证标记为不足。真实工作台按 v0.2 重构为更高层级的作业控制台、异常队列和审计/回滚视图。
 
 最小视图：
 
@@ -149,11 +152,11 @@ Agent 不能绕过人工确认直接写 Accepted。详细规则见 `docs/agent-o
 
 ### 2.7 Accepted 入库
 
-人工确认后写入 `accepted/`，同时写入 `accepted/changes.jsonl`。
+经独立复核自动通过或人工裁决后写入 `accepted/`，同时写入 `accepted/changes.jsonl`。
 
-状态：审计边界有效；“人工确认”的交互粒度待重构。不能因为避免逐候选点击而放宽 AI 直接写 Accepted 的边界。
+状态：审计边界有效；“人工确认”已重新定义为异常裁决与审计抽查。低风险 AI 草案可由独立复核 Agent 自动落盘。
 
-AI 不直接写 Accepted。
+AI 不静默写 Accepted；自动写入必须有独立复核、Change、`reviewer_model` / `work_run_id` 记录和回滚路径。
 
 Accepted 对象必须带 `created_change_id`。Change 必须带 `target_file`、`target_type`、`target_id`、`operation`、`approved_by` 和 `created_at`。
 
@@ -222,4 +225,4 @@ skipped
 - 完整复杂图谱布局。
 - 官方资料外部来源正式入库。
 - 自动合并实体。
-- AI 直接改 Accepted。
+- AI 静默改 Accepted。
