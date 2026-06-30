@@ -78,7 +78,8 @@
 - 文本完全原创。
 - 覆盖人物、组织、对话、事件、关系变化、数值变化、术语、伏笔、跳读剧透风险。
 - chapter/block/scene 注释符合 data-format-v0.1.md。
-- 每章至少 5 个 block，全卷至少 30 个 block。
+- 每章至少 5 个 block，全卷至少 35 个 block。
+- 覆盖 test-book-gray-tower.md 中的第一阶段硬验收指标。
 ```
 
 ## 0.3 清洗后文本操作 Agent 独立提示词
@@ -162,7 +163,7 @@
 - 能稳定解析 samples/gray-tower。
 - JSONL 每行合法。
 - block text 不包含 HTML 注释。
-- scene start/end 正确。
+- scene `action: start/end` 正确。
 - 重复运行结果稳定。
 ```
 
@@ -245,8 +246,10 @@
    - parsed/*.jsonl 占位或初始文件
    - accepted/*.jsonl 占位或初始文件
    - candidates/candidates.jsonl
+   - review/block_progress.jsonl
    - review/review_items.jsonl
    - review/open_questions.jsonl
+   - reports/work_runs.jsonl
    - reports/
    - compiled/
    - assets/images/
@@ -265,7 +268,7 @@
 - 目录结构符合 data-format-v0.1.md。
 - manifest 中章节列表与 Markdown 章节一致。
 - Markdown 中每个 block ID 合法，且每章从 b0001 开始。
-- 至少包含一个 scene start/end。
+- 至少包含一个 `scene action: start/end`。
 - 至少包含一个 dialogue block。
 - 不引入真实版权文本。
 ```
@@ -302,9 +305,9 @@
 验收标准：
 
 - 每章至少 5 个 block。
-- 全卷至少 30 个 block。
+- 全卷至少 35 个 block。
 - 至少 8 个 dialogue block。
-- 至少 3 个 scene。
+- 至少 4 个 scene。
 - 至少 1 个后文揭示前文伏笔的设计。
 - 文本能用于测试 read_boundary 和 current_block。
 ```
@@ -326,7 +329,7 @@
 2. 解析以下 HTML 注释：
    - chapter
    - block
-   - scene start/end
+   - scene action: start/end
    - asset
    - alignment
 3. 生成：
@@ -345,8 +348,9 @@
 - 能解析 samples/gray-tower。
 - 生成的 JSONL 每行都是合法 JSON。
 - blocks.jsonl 的 block 数量和 Markdown 注释一致。
-- scenes.jsonl 的 start/end block 正确。
+- scenes.jsonl 的 `action: start/end` 对应 block 正确。
 - block 的 chapter_id、volume_id、order 正确。
+- blocks.jsonl 不保存 review_status；block 进度属于 review/block_progress.jsonl。
 - 重复运行结果稳定。
 ```
 
@@ -376,7 +380,10 @@
 3. 校验引用：
    - asset anchor 引用存在的 asset 和 block
    - alignment 引用存在的中文 block
-   - Accepted / Candidate 引用存在的 block/entity/event/metric
+   - Accepted / Candidate / Review 引用存在的 block/entity/event/metric/change
+   - Accepted 对象的 created_change_id 和 Change 审计链
+   - Candidate 的 source_span、payload.draft、visible_from
+   - reader 包不包含 candidates/review/open_questions 或 AI 中间产物
 4. 输出 `reports/validation_report.json`。
 5. 每条问题尽量包含 code、severity、message、file、line、block_id/chapter_id/object_id、suggested_action。
 
@@ -399,6 +406,7 @@
 
 - docs/data-format-v0.1.md
 - docs/workflow-spec-v0.1.md
+- docs/phase-1-design-decisions-v0.1.md
 - samples/gray-tower/parsed/blocks.jsonl
 
 任务：
@@ -413,28 +421,35 @@
    - metric
    - metric_change
    - term_card
+   - character_card
+   - asset_subject
+   - review_item
    - open_question
 3. 每条 Candidate 必须包含：
    - id
    - series_id
    - type
-   - block_id 或 source_span
+   - source_span
    - visible_from
    - confidence
    - status
    - model
    - task_id
    - payload
-4. payload 尽量贴近目标 Accepted 对象结构。
-5. AI 可提出新 entity ID，但不能写 Accepted。
+4. block_id 只是主显示位置，可选；若存在，必须落在 source_span 内。
+5. 普通 Candidate 的 payload 必须包含 target_type、draft、evidence、risk_flags。
+6. AI 可提出新 entity ID，但不能写 Accepted。
+7. 所有 speaker_label 只作为 Candidate，必须在对话 block 复核时由人工确认后才进入 Accepted。
 
 验收标准：
 
 - candidates.jsonl 每行合法 JSON。
-- 至少 20 条候选。
-- 每条候选能追溯到有效 block。
-- 至少包含一个低置信或需复核的候选。
+- 至少 25 条候选。
+- 每条候选有有效 source_span。
+- 至少 3 条低置信候选。
+- 至少 2 条冲突或疑似重复候选。
 - 至少包含一个 open_question。
+- 至少包含一个 review_item。
 ```
 
 ## 6. 阶段六：制作 Accepted 样例数据
@@ -447,6 +462,7 @@
 
 - docs/data-format-v0.1.md
 - docs/workflow-spec-v0.1.md
+- docs/phase-1-design-decisions-v0.1.md
 
 任务：
 
@@ -460,15 +476,19 @@
    - accepted/term_cards.jsonl
    - accepted/speaker_labels.jsonl
    - accepted/character_cards.jsonl
+   - accepted/asset_subjects.jsonl
    - accepted/changes.jsonl
-2. 每条 Accepted 数据必须有正文 source_span。
-3. 每次接受或修改候选都写入 changes.jsonl。
-4. 不确定内容进入 review/open_questions.jsonl。
+2. 每条 Accepted 数据必须有 source_span，或符合 character_card source_refs / asset_subject asset_anchor_id 例外规则。
+3. 每条 Accepted 数据必须有 created_change_id。
+4. 每次接受、修改、合并、弃用正式对象都写入 changes.jsonl。
+5. Change 必须包含 target_file、target_type、target_id、operation、approved_by、created_at。
+6. 不确定内容进入 review/open_questions.jsonl。
 
 验收标准：
 
 - Accepted 对象引用全部有效。
-- 每条正式增强数据有 source_span 或明确 source_refs 规则内引用。
+- 每条正式增强数据有 source_span，或符合 character_card source_refs / asset_subject asset_anchor_id 例外规则。
+- 每条正式增强数据有 created_change_id。
 - changes.jsonl 至少 10 条。
 - 至少一个候选被拒绝或转为 open_question。
 - validator 能通过 Accepted 基础校验。
@@ -484,11 +504,12 @@
 
 - docs/phase-1-implementation-spec.md
 - docs/data-format-v0.1.md
+- docs/compiled-query-spec-v0.1.md
 
 任务：
 
 1. 编写编译工具，读取 manifest、parsed/*.jsonl、accepted/*.jsonl。
-2. 输出 `compiled/reader_index.json`。
+2. 只有 validation report 无 error 时输出 `compiled/reader_index.json`。
 3. 实现或模拟查询函数：
    - getVisibleContext(current_block, read_boundary, options)
 4. 查询结果至少包含：
@@ -503,12 +524,14 @@
    - optional ja reference
 5. 所有增强数据按 read_boundary 过滤。
 6. current_block 只用于当前位置相关性，不放宽剧透边界。
+7. reader_index.json 包含 timeline.order、source_summary 和 validation_report 元信息。
 
 验收标准：
 
 - 给定较早 read_boundary 时，不返回后文揭示信息。
 - 给定终章后的 read_boundary 时，能返回伏笔解释或后文事件。
 - current_block 超过 read_boundary 时，仍只返回 read_boundary 前可见信息。
+- current_block 超过 read_boundary 时，返回 is_ahead_of_boundary。
 - JSON 结构稳定，可供阅读器使用。
 ```
 
@@ -528,7 +551,7 @@
 1. 做一个最小界面或命令行/网页原型。
 2. 左侧显示卷、章节、block 进度。
 3. 中间显示当前 block 和前后上下文。
-4. 右侧显示当前 block 相关 Candidates。
+4. 右侧显示当前 block/source_span 相关 Candidates。
 5. 支持操作：
    - accept
    - edit and accept
@@ -537,12 +560,12 @@
    - convert to open question
    - skip
    - mark block reviewed
-6. 操作后写入对应 Accepted JSONL 和 changes.jsonl。
+6. 操作后写入对应 Accepted JSONL、changes.jsonl、Candidate status 和 review/block_progress.jsonl。
 
 验收标准：
 
 - 能加载 samples/gray-tower。
-- 能按 block 顺序浏览。
+- 能按 source_span.start_block 的正文时间线顺序浏览。
 - 能接受至少一种 candidate 并写入 Accepted。
 - 能生成 Change。
 - 能把不确定候选转为 open_question。
@@ -559,6 +582,7 @@
 
 - docs/phase-1-implementation-spec.md
 - docs/data-format-v0.1.md
+- docs/compiled-query-spec-v0.1.md
 
 任务：
 
@@ -618,6 +642,7 @@
 - validator 无 error。
 - 阅读器能展示至少人物、事件、术语、数值变化中的三类增强信息。
 - 后文揭示不会在 read_boundary 前显示。
+- current_block 超过 read_boundary 时，增强数据仍按 read_boundary 过滤。
 - 文档、样例、工具之间没有明显字段不一致。
 
 输出：
