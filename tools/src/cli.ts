@@ -7,11 +7,15 @@
 // `parse` runs the Parser over a bookpack: it regenerates parsed/*.jsonl and
 // reports/cleaning_report.json. With a volume_id it parses only that volume
 // (dry-run, prints a summary) without writing files.
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { FileStore } from "./fileStore.js";
 import { Parser } from "./parser.js";
 import { Validator } from "./validator.js";
 import { Compiler, CompileError } from "./compiler.js";
 import { CompiledQuery } from "./query.js";
+import { loadConfig, isModelReady } from "./agent/config.js";
+import { chat, imagePart } from "./agent/llm.js";
 
 function usage(): never {
   console.error("Usage:");
@@ -19,7 +23,35 @@ function usage(): never {
   console.error("  nc validate <bookpack-dir>");
   console.error("  nc compile <bookpack-dir>");
   console.error("  nc query <bookpack-dir> <current_block> <read_boundary> [--ja]");
+  console.error("  nc describe-image <image-path> [prompt]   # 用 vision 角色（如 MiMo）识图");
   process.exit(2);
+}
+
+const MIME_BY_EXT: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+};
+
+async function cmdDescribeImage(args: string[]): Promise<void> {
+  const [imagePath, ...promptParts] = args;
+  if (!imagePath) usage();
+  const cfg = loadConfig();
+  if (!isModelReady(cfg.vision))
+    throw new Error("vision 角色未配置：在 tools/.workbench-config.json 填好 vision 的 base_url / api_key / model。");
+  const mime = MIME_BY_EXT[path.extname(imagePath).toLowerCase()] ?? "image/png";
+  const bytes = readFileSync(imagePath);
+  const prompt = promptParts.join(" ") || "用中文详细描述这张图里有哪些人物、物体、场景和文字。";
+  const r = await chat(
+    cfg.vision,
+    [{ role: "user", content: [imagePart(bytes, mime), { type: "text", text: prompt }] }],
+    { maxCompletionTokens: 1024 },
+  );
+  console.log(`[describe-image] model=${r.model} file=${imagePath} (${mime}, ${bytes.length} bytes)`);
+  console.log(r.text);
+  if (r.usage) console.log(`\nusage: ${JSON.stringify(r.usage)}`);
 }
 
 function cmdParse(args: string[]): void {
@@ -123,7 +155,7 @@ function cmdQuery(args: string[]): void {
   console.log(JSON.stringify(ctx, null, 2));
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   switch (command) {
     case "parse":
@@ -138,9 +170,15 @@ function main(): void {
     case "query":
       cmdQuery(rest);
       break;
+    case "describe-image":
+      await cmdDescribeImage(rest);
+      break;
     default:
       usage();
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
