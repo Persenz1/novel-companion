@@ -13,9 +13,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = path.resolve(here, "..", "..", ".workbench-config.json");
 
 export interface ModelConfig {
-  base_url: string; // 例如 https://api.deepseek.com/v1
+  base_url: string; // 例如 https://api.deepseek.com
   api_key: string;
-  model: string; // 例如 ds4flash / dsv4pro / mimov2.5
+  model: string; // 例如 deepseek-chat / deepseek-reasoner / mimo-v2.5
 }
 
 export interface WorkbenchConfig {

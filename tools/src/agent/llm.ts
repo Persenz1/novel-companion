@@ -37,7 +37,7 @@ function joinUrl(base: string, suffix: string): string {
 export async function chat(
   cfg: ModelConfig,
   messages: ChatMessage[],
-  opts: { temperature?: number; jsonMode?: boolean; maxCompletionTokens?: number; signal?: AbortSignal } = {},
+  opts: { temperature?: number; jsonMode?: boolean; maxTokens?: number; maxCompletionTokens?: number; signal?: AbortSignal } = {},
 ): Promise<ChatResult> {
   if (!cfg.base_url || !cfg.api_key || !cfg.model)
     throw new LlmError("模型未配置：base_url / api_key / model 必填。");
@@ -48,7 +48,11 @@ export async function chat(
     temperature: opts.temperature ?? 0.2,
   };
   if (opts.jsonMode) body.response_format = { type: "json_object" };
-  // MiMo 等要求 max_completion_tokens；仅在调用方指定时下发，避免影响只认 max_tokens 的供应商。
+  // 两套上限参数按供应商区分，避免相互污染：
+  //   DeepSeek（及多数 OpenAI 兼容供应商）用 max_tokens；
+  //   MiMo 等推理模型用 max_completion_tokens。
+  // 只在调用方指定时各自下发，未知字段会被对端忽略。
+  if (opts.maxTokens) body.max_tokens = opts.maxTokens;
   if (opts.maxCompletionTokens) body.max_completion_tokens = opts.maxCompletionTokens;
 
   let resp: Response;

@@ -216,7 +216,8 @@ export async function runDraft(
       { role: "system", content: DRAFTER_SYSTEM },
       { role: "user", content: buildDrafterUser(chapterTitle(manifest, chapterId), targetBlocks, background, accepted) },
     ],
-    { jsonMode: true, temperature: 0.2 },
+    // max_tokens 顶到 deepseek-chat 上限，避免多候选 JSON 被 4096 默认值截断成半截。
+    { jsonMode: true, temperature: 0.2, maxTokens: 8192 },
   );
 
   const parsed = extractJson<{ candidates?: Rec[] }>(res.text);

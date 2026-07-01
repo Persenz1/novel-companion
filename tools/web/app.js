@@ -70,6 +70,10 @@ function fillConfig(cfg) {
   $("#cfg-reviewer-url").value = cfg.reviewer.base_url || "";
   $("#cfg-reviewer-model").value = cfg.reviewer.model || "";
   $("#cfg-reviewer-key").placeholder = cfg.reviewer.api_key_set ? "已配置（留空＝不修改）" : "api_key";
+  const vision = cfg.vision || {};
+  $("#cfg-vision-url").value = vision.base_url || "";
+  $("#cfg-vision-model").value = vision.model || "";
+  $("#cfg-vision-key").placeholder = vision.api_key_set ? "已配置（留空＝不修改）" : "api_key";
 }
 
 async function saveConfig() {
@@ -85,11 +89,17 @@ async function saveConfig() {
       model: $("#cfg-reviewer-model").value.trim(),
       api_key: $("#cfg-reviewer-key").value,
     },
+    vision: {
+      base_url: $("#cfg-vision-url").value.trim(),
+      model: $("#cfg-vision-model").value.trim(),
+      api_key: $("#cfg-vision-key").value,
+    },
   };
   try {
     await api("/api/config", "POST", body);
     $("#cfg-drafter-key").value = "";
     $("#cfg-reviewer-key").value = "";
+    $("#cfg-vision-key").value = "";
     toast("设置已保存");
     await init();
   } catch (err) {

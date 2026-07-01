@@ -22,6 +22,7 @@
 - 落盘后收口：`POST /api/compile`（先 validate 再 compile），队列面板「重新编译」按钮一键刷新阅读器右栏。
 - 多模态识图：config 加 `vision` 角色（OpenAI 兼容，如 MiMo `mimo-v2.5`）；`llm.chat` 支持图文混合内容 + `imagePart()` + 双鉴权头（Bearer/api-key）；`nc describe-image <path>` CLI 可对任意图跑识别。
 - 清洗·图片标注（Phase 1）：`/cleaning/` 页 + `src/cleaning/imageAnnotate.ts`。vision 模型看图给出 alt + 描述（可按角色名册认人），人工确认后 `POST /api/cleaning/set-alt` 写回卷 Markdown 的 asset 标记并重解析。图片身份在**清洗阶段**定死，操作阶段（纯文本 DeepSeek）直接信任，不把多模态接进 agent。已用真实插图验证（单人/五人群像按名册认人正确）。**清洗→起草→复核→批量裁决→compile→阅读 一条龙已端到端跑通**（工作副本上：MiMo 标注图片→写回 Markdown→reparse→起草复核→compile→阅读器右栏显示确认后的图注）。
+- 配置形态（对齐 DeepSeek 官方文档）：base_url 用 `https://api.deepseek.com`，起草 `deepseek-chat`、复核 `deepseek-reasoner`；设置面板新增「识图模型」栏，MiMo 可在界面直接配置，无需手改 `.workbench-config.json`。`llm.chat` 区分 `max_tokens`（DeepSeek 等）与 `max_completion_tokens`（MiMo 等推理模型）两套上限，起草调用固定 `max_tokens=8192` 防多候选 JSON 被 4096 默认值截断。工作副本建议放在 `/tmp` 之外的持久目录（如 `~/nc-workpack/gray-tower`），避免重启清空 `/tmp` 后数据包丢失。
 - 回滚入口：单 Change / 整批 work_run。
 - Markdown 阅读器：`tools/src/reader.ts` + `tools/web/reader/`。阅读标尺推算 `current_block`，连续阅读推进 `read_boundary`，跳读 / 目录跳转 / 大幅拖动不推进，也可鼠标点选 block；右侧面板按 `read_boundary` 调 `getVisibleContext`，越界时提示预览。目录为推开式独立栏，不遮挡正文。
 - 中日双语显示（真正双语，非参考对照）：逐段交替（中文段 + 其日文段），可切 中日双语 / 仅中文 / 仅日文。日文按 block 1:1 存于 `source/ja/{vol}.blocks.json`，阅读器侧读入合并；中文仍是唯一时间线主轴、防剧透基准；核心 parser/validator/compiler/schema 不受影响。读侧逻辑抽到 `tools/src/readerView.ts`。

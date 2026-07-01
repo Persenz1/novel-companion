@@ -27,16 +27,23 @@
 
           <fieldset>
             <legend>起草模型（主力）</legend>
-            <input type="text" id="cfg-drafter-url" placeholder="base_url，如 https://api.deepseek.com/v1" />
-            <input type="text" id="cfg-drafter-model" placeholder="model，如 ds4flash" />
+            <input type="text" id="cfg-drafter-url" placeholder="base_url，如 https://api.deepseek.com" />
+            <input type="text" id="cfg-drafter-model" placeholder="model，如 deepseek-chat" />
             <input type="password" id="cfg-drafter-key" placeholder="api_key（留空＝不修改）" />
           </fieldset>
 
           <fieldset>
             <legend>复核模型（须不同于起草）</legend>
-            <input type="text" id="cfg-reviewer-url" placeholder="base_url，如 https://api.deepseek.com/v1" />
-            <input type="text" id="cfg-reviewer-model" placeholder="model，如 dsv4pro / mimov2.5" />
+            <input type="text" id="cfg-reviewer-url" placeholder="base_url，如 https://api.deepseek.com" />
+            <input type="text" id="cfg-reviewer-model" placeholder="model，如 deepseek-reasoner" />
             <input type="password" id="cfg-reviewer-key" placeholder="api_key（留空＝不修改）" />
+          </fieldset>
+
+          <fieldset>
+            <legend>识图模型（清洗·图片，多模态）</legend>
+            <input type="text" id="cfg-vision-url" placeholder="base_url，如 https://api.xiaomimimo.com/v1" />
+            <input type="text" id="cfg-vision-model" placeholder="model，如 mimo-v2.5" />
+            <input type="password" id="cfg-vision-key" placeholder="api_key（留空＝不修改）" />
           </fieldset>
 
           <p class="hint" id="cfg-采用提示">采用 OpenAI 通用协议（/chat/completions）。配置保存在本地，不进数据包。</p>
