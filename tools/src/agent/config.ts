@@ -13,6 +13,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = path.resolve(here, "..", "..", ".workbench-config.json");
 
 export interface ModelConfig {
+  provider?: "auto" | "openai" | "deepseek" | "mimo";
   base_url: string; // 例如 https://api.deepseek.com
   api_key: string;
   model: string; // 例如 deepseek-v4-flash / deepseek-v4-pro / mimo-v2.5
@@ -25,7 +26,7 @@ export interface WorkbenchConfig {
   vision: ModelConfig; // 识图角色（多模态，如 mimo-v2.5）；未配则图片仍走人工队列
 }
 
-const EMPTY_MODEL: ModelConfig = { base_url: "", api_key: "", model: "" };
+const EMPTY_MODEL: ModelConfig = { provider: "auto", base_url: "", api_key: "", model: "" };
 
 export function defaultConfig(bookpackDir = ""): WorkbenchConfig {
   return {
@@ -58,6 +59,7 @@ export function saveConfig(cfg: WorkbenchConfig): void {
 /** 不向前端回传 api_key 明文：只标注是否已配置。 */
 export function redactConfig(cfg: WorkbenchConfig): unknown {
   const redactModel = (m: ModelConfig) => ({
+    provider: m.provider ?? "auto",
     base_url: m.base_url,
     model: m.model,
     api_key_set: Boolean(m.api_key),

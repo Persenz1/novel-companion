@@ -1,10 +1,25 @@
-// 清洗·图片标注前端（原生 ESM，无构建）。
 const $ = (s) => document.querySelector(s);
-const el = (t, c, txt) => { const n = document.createElement(t); if (c) n.className = c; if (txt != null) n.textContent = txt; return n; };
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+
+const state = {
+  tasks: [],
+  selectedTask: null,
+  lastOutput: null,
+  activeBookpack: false,
+  taskStatus: new Map(),
+};
 
 async function api(path, method = "GET", body) {
   const opt = { method, headers: {} };
-  if (body !== undefined) { opt.headers["content-type"] = "application/json"; opt.body = JSON.stringify(body); }
+  if (body !== undefined) {
+    opt.headers["content-type"] = "application/json";
+    opt.body = JSON.stringify(body);
+  }
   const resp = await fetch(path, opt);
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || `请求失败 ${resp.status}`);
@@ -13,70 +28,309 @@ async function api(path, method = "GET", body) {
 
 function toast(msg, isErr = false) {
   const t = $("#toast");
-  t.textContent = msg; t.className = isErr ? "err" : ""; t.style.display = "block";
-  clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.display = "none"), 3000);
+  t.textContent = msg;
+  t.className = `toast${isErr ? " err" : ""}`;
+  t.hidden = false;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => (t.hidden = true), 3200);
 }
 
-async function load() {
-  const list = $("#list");
-  list.replaceChildren(el("p", "hint", "加载中…"));
-  try {
-    const { assets } = await api("/api/cleaning/assets");
-    list.replaceChildren();
-    if (!assets.length) { list.appendChild(el("p", "hint", "这个 bookpack 没有图片资产。")); return; }
-    for (const a of assets) list.appendChild(card(a));
-  } catch (err) {
-    list.replaceChildren(el("p", "hint", err.message));
+function banner(msg, active = false) {
+  const b = $("#run-banner");
+  b.textContent = msg;
+  b.className = `run-banner${active ? " active" : ""}`;
+  b.hidden = !msg;
+}
+
+function setProgress(done, total, text) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  $("#clean-progress").style.width = `${pct}%`;
+  $("#progress-text").textContent = text || (total ? `${done}/${total}` : "等待开始");
+}
+
+async function loadState() {
+  const data = await api("/api/state");
+  if (data.bookpack?.ok) {
+    $("#pack-status").textContent = state.activeBookpack
+      ? `${data.bookpack.pack_name}（${data.bookpack.series?.title || "未命名"}）`
+      : "等待导入 EPUB";
+  } else {
+    $("#pack-status").textContent = "等待导入 EPUB";
   }
 }
 
-function card(a) {
-  const c = el("div", "card");
-  const left = el("div");
-  if (a.path) { const img = el("img"); img.src = a.url; img.alt = a.id; left.appendChild(img); }
-  else left.appendChild(el("div", "meta", "（无图片文件）"));
-  c.appendChild(left);
-
-  const right = el("div");
-  const meta = el("div", "meta");
-  meta.innerHTML = `<b>${a.id}</b> · 卷 ${a.volume} · 锚点 ${a.anchor_block || "—"}`;
-  right.appendChild(meta);
-
-  right.appendChild(el("label", null, "alt（图注 — 会写回 Markdown）"));
-  const alt = el("input", "alt"); alt.value = a.alt || ""; right.appendChild(alt);
-
-  const desc = el("div", "desc"); desc.hidden = true; right.appendChild(desc);
-
-  const row = el("div", "row");
-  const btnAI = el("button", null, "MiMo 识别");
-  const btnSave = el("button", "primary", "确认保存");
-  const status = el("span", "tag");
-  btnAI.addEventListener("click", async () => {
-    btnAI.disabled = true; btnAI.textContent = "识别中…";
-    try {
-      const roster = $("#roster").value.trim();
-      const r = await api("/api/cleaning/annotate", "POST", { asset_id: a.id, roster });
-      alt.value = r.alt || alt.value;
-      desc.textContent = r.description || ""; desc.hidden = !r.description;
-      $("#model").textContent = r.model ? `vision: ${r.model}` : "";
-      status.textContent = "已识别，待确认"; status.className = "tag";
-    } catch (err) { toast(err.message, true); }
-    finally { btnAI.disabled = false; btnAI.textContent = "MiMo 识别"; }
-  });
-  btnSave.addEventListener("click", async () => {
-    btnSave.disabled = true;
-    try {
-      const r = await api("/api/cleaning/set-alt", "POST", { asset_id: a.id, alt: alt.value.trim() });
-      if (r.asset) alt.value = r.asset.alt || "";
-      status.textContent = "已保存并重解析"; status.className = "tag saved";
-      toast("已写回 Markdown 并重解析");
-    } catch (err) { toast(err.message, true); }
-    finally { btnSave.disabled = false; }
-  });
-  row.append(btnAI, btnSave, status);
-  right.appendChild(row);
-  c.appendChild(right);
-  return c;
+function resetWorkspace() {
+  state.tasks = [];
+  state.selectedTask = null;
+  state.lastOutput = null;
+  state.activeBookpack = false;
+  state.taskStatus = new Map();
+  $("#pack-status").textContent = "等待导入 EPUB";
+  $("#epub-path").value = "";
+  setProgress(0, 0, "等待开始");
+  renderTasks();
+  $("#asset-list").replaceChildren(el("div", "empty", "导入 EPUB 后显示图片"));
+  renderOutput({ parsed: { suggestions: [], summary: "导入 EPUB 后显示清洗建议" } });
 }
 
-load();
+async function autoClean() {
+  const epubPath = $("#epub-path").value.trim();
+  if (!epubPath) throw new Error("请填写 EPUB 路径。");
+  resetForRun();
+  banner("正在导入 EPUB 并生成章节任务…", true);
+  setProgress(0, 1, "导入 EPUB");
+  const r = await api("/api/cleaning/auto-start", "POST", { epub_path: epubPath });
+  state.activeBookpack = true;
+  state.tasks = r.prepared?.tasks || [];
+  state.tasks.forEach((task) => state.taskStatus.set(task.file, "pending"));
+  banner("");
+  toast(`导入完成：${r.imported.chapter_count} 章，${r.imported.block_count} blocks，${r.imported.image_count} 图`);
+  await loadState();
+  renderTasks();
+  await loadAssets();
+  renderOutput({
+    parsed: {
+      suggestions: [],
+      summary: `validation=${r.imported.validation?.status || "unknown"}，开始逐章清洗`,
+    },
+  });
+  await runAllTasks();
+}
+
+function resetForRun() {
+  state.tasks = [];
+  state.selectedTask = null;
+  state.lastOutput = null;
+  state.activeBookpack = false;
+  state.taskStatus = new Map();
+  renderTasks();
+  $("#asset-list").replaceChildren(el("div", "empty", "导入 EPUB 后显示图片"));
+  renderOutput({ parsed: { suggestions: [], summary: "准备开始" } });
+}
+
+async function loadTasks() {
+  const box = $("#task-list");
+  if (!state.activeBookpack) {
+    renderTasks();
+    return;
+  }
+  box.replaceChildren(el("div", "empty", "加载中…"));
+  try {
+    const { index } = await api("/api/cleaning/mimo-tasks");
+    state.tasks = index?.tasks || [];
+    renderTasks();
+  } catch (err) {
+    box.replaceChildren(el("div", "empty", err.message));
+  }
+}
+
+function renderTasks() {
+  const box = $("#task-list");
+  box.replaceChildren();
+  $("#btn-run-selected").disabled = !state.selectedTask;
+  if (!state.tasks.length) {
+    box.appendChild(el("div", "empty", "暂无任务包"));
+    return;
+  }
+  for (const task of state.tasks) {
+    const status = state.taskStatus.get(task.file) || "pending";
+    const row = el("button", `task-row${state.selectedTask?.file === task.file ? " active" : ""}`);
+    row.type = "button";
+    row.addEventListener("click", () => {
+      state.selectedTask = task;
+      renderTasks();
+      renderOutput({ parsed: { suggestions: [], summary: `${task.chapter_id} · ${task.block_count} blocks · ${task.image_count} images` } });
+    });
+    const title = el("span", "task-title", task.chapter_id);
+    const meta = el("span", "task-meta", `${task.block_count} blocks · ${task.image_count} images`);
+    row.append(title, meta, el("span", `task-state ${status}`, statusLabel(status)));
+    box.appendChild(row);
+  }
+}
+
+function statusLabel(status) {
+  return {
+    pending: "等待",
+    running: "运行中",
+    done: "完成",
+    error: "失败",
+  }[status] || status;
+}
+
+async function runAllTasks() {
+  if (!state.tasks.length) {
+    setProgress(1, 1, "没有章节任务");
+    return;
+  }
+  let done = 0;
+  let failed = 0;
+  for (const task of state.tasks) {
+    state.selectedTask = task;
+    state.taskStatus.set(task.file, "running");
+    renderTasks();
+    banner(`MiMo 正在清洗 ${task.chapter_id}…`, true);
+    setProgress(done, state.tasks.length, `正在清洗 ${task.chapter_id}`);
+    try {
+      const r = await api("/api/cleaning/run-mimo", "POST", { task_file: task.file });
+      state.taskStatus.set(task.file, "done");
+      state.lastOutput = r.output;
+      renderOutput(r.output);
+      done += 1;
+      setProgress(done, state.tasks.length, `已完成 ${done}/${state.tasks.length}`);
+    } catch (err) {
+      state.taskStatus.set(task.file, "error");
+      failed += 1;
+      renderTasks();
+      renderOutput({ parsed: { suggestions: [], summary: `${task.chapter_id} 失败：${err.message}` }, error: err.message });
+      setProgress(done, state.tasks.length, `${task.chapter_id} 失败，继续下一章`);
+    }
+  }
+  banner("");
+  toast(failed ? `自动清洗完成：${done}/${state.tasks.length} 章，失败 ${failed} 章` : `自动清洗完成：${done}/${state.tasks.length} 章`, failed > 0);
+}
+
+async function runSelectedTask() {
+  if (!state.selectedTask) return;
+  banner(`MiMo 正在处理 ${state.selectedTask.chapter_id}…`, true);
+  const r = await api("/api/cleaning/run-mimo", "POST", { task_file: state.selectedTask.file });
+  banner("");
+  toast(`MiMo 返回 ${r.suggestion_count} 条建议`);
+  state.lastOutput = r.output;
+  renderOutput(r.output);
+}
+
+function renderOutput(output) {
+  const suggestions = output?.parsed?.suggestions || [];
+  const sugBox = $("#tab-suggestions");
+  const rawBox = $("#tab-raw");
+  sugBox.replaceChildren();
+  rawBox.replaceChildren();
+
+  if (!suggestions.length) {
+    sugBox.appendChild(el("div", "empty", output?.parsed?.summary || "暂无清洗建议"));
+  } else {
+    for (const s of suggestions) sugBox.appendChild(suggestionCard(s));
+  }
+  const pre = el("pre", "raw-json");
+  pre.textContent = JSON.stringify(output || {}, null, 2);
+  rawBox.appendChild(pre);
+}
+
+function suggestionCard(s) {
+  const card = el("div", "suggestion");
+  const head = el("div", "suggestion-head");
+  head.append(
+    el("span", "m-type", s.type || "suggestion"),
+    el("span", "m-title", s.target || s.id || "未命名目标"),
+    el("span", `risk ${s.risk || "medium"}`, s.risk || "medium"),
+  );
+  card.appendChild(head);
+  card.appendChild(el("div", "m-desc", s.reason || ""));
+  const meta = el("div", "m-span", `confidence=${s.confidence ?? "—"}`);
+  card.appendChild(meta);
+  if (s.patch && Object.keys(s.patch).length) {
+    const detail = el("pre", "m-detail");
+    detail.textContent = JSON.stringify(s.patch, null, 2);
+    card.appendChild(detail);
+  }
+  return card;
+}
+
+async function loadAssets() {
+  const list = $("#asset-list");
+  if (!state.activeBookpack) {
+    list.replaceChildren(el("div", "empty", "导入 EPUB 后显示图片"));
+    return;
+  }
+  list.replaceChildren(el("div", "empty", "加载中…"));
+  try {
+    const { assets } = await api("/api/cleaning/assets");
+    list.replaceChildren();
+    if (!assets.length) {
+      list.appendChild(el("div", "empty", "暂无图片"));
+      return;
+    }
+    for (const asset of assets) list.appendChild(assetCard(asset));
+  } catch (err) {
+    list.replaceChildren(el("div", "empty", err.message));
+  }
+}
+
+function assetCard(a) {
+  const card = el("div", "clean-asset");
+  if (a.path) {
+    const img = el("img");
+    img.src = a.url;
+    img.alt = a.id;
+    card.appendChild(img);
+  }
+  const body = el("div", "clean-asset-body");
+  body.appendChild(el("div", "block-id", `${a.id} · ${a.anchor_block || "—"}`));
+  const input = el("input");
+  input.type = "text";
+  input.value = a.alt || "";
+  input.placeholder = "alt";
+  const row = el("div", "row");
+  const ai = el("button", null, "MiMo 识别");
+  const save = el("button", "primary", "保存");
+  const note = el("span", "hint");
+  ai.addEventListener("click", async () => {
+    ai.disabled = true;
+    ai.textContent = "识别中…";
+    try {
+      const r = await api("/api/cleaning/annotate", "POST", {
+        asset_id: a.id,
+        roster: $("#roster").value.trim(),
+      });
+      input.value = r.alt || input.value;
+      note.textContent = r.description || "";
+      toast(`识别完成：${r.model || "vision"}`);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      ai.disabled = false;
+      ai.textContent = "MiMo 识别";
+    }
+  });
+  save.addEventListener("click", async () => {
+    save.disabled = true;
+    try {
+      await api("/api/cleaning/set-alt", "POST", { asset_id: a.id, alt: input.value.trim() });
+      toast("已写回 Markdown 并重解析");
+      await loadAssets();
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      save.disabled = false;
+    }
+  });
+  row.append(ai, save);
+  body.append(input, row, note);
+  card.appendChild(body);
+  return card;
+}
+
+function setupTabs() {
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x === btn));
+      $("#tab-suggestions").hidden = btn.dataset.tab !== "suggestions";
+      $("#tab-raw").hidden = btn.dataset.tab !== "raw";
+    });
+  });
+}
+
+function bind() {
+  $("#btn-auto-clean").addEventListener("click", () => autoClean().catch((err) => { banner(""); toast(err.message, true); }));
+  $("#btn-reset").addEventListener("click", resetWorkspace);
+  $("#btn-run-selected").addEventListener("click", () => runSelectedTask().catch((err) => { banner(""); toast(err.message, true); }));
+  setupTabs();
+}
+
+async function init() {
+  bind();
+  resetWorkspace();
+  await loadState();
+}
+
+init().catch((err) => toast(err.message, true));

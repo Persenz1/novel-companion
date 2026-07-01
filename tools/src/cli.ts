@@ -16,6 +16,10 @@ import { Compiler, CompileError } from "./compiler.js";
 import { CompiledQuery } from "./query.js";
 import { loadConfig, isModelReady } from "./agent/config.js";
 import { chat, imagePart } from "./agent/llm.js";
+import { exportBookpackToEpub } from "./cleaning/bookpackToEpub.js";
+import { importEpubToBookpack } from "./cleaning/epubImport.js";
+import { prepareMimoCleaningInputs } from "./cleaning/mimoFeed.js";
+import { runMimoCleaningTask } from "./cleaning/mimoRun.js";
 
 function usage(): never {
   console.error("Usage:");
@@ -24,6 +28,10 @@ function usage(): never {
   console.error("  nc compile <bookpack-dir>");
   console.error("  nc query <bookpack-dir> <current_block> <read_boundary> [--ja]");
   console.error("  nc describe-image <image-path> [prompt]   # 用 vision 角色（如 MiMo）识图");
+  console.error("  nc export-epub <bookpack-dir> <out.epub> [volume_id]");
+  console.error("  nc import-epub <epub-path> <bookpack-dir> [--volume-id v01] [--series-id id] [--pack-id id] [--pack-name name] [--force] [--no-validate]");
+  console.error("  nc prepare-mimo <bookpack-dir> [volume_id]");
+  console.error("  nc run-mimo-cleaning <bookpack-dir> <task-json>");
   process.exit(2);
 }
 
@@ -155,6 +163,91 @@ function cmdQuery(args: string[]): void {
   console.log(JSON.stringify(ctx, null, 2));
 }
 
+function cmdExportEpub(args: string[]): void {
+  const [bookpackDir, outputPath, volumeId] = args;
+  if (!bookpackDir || !outputPath) usage();
+  const result = exportBookpackToEpub(bookpackDir, outputPath, volumeId);
+  console.log(`[export-epub] ${result.output}`);
+  console.log(
+    `  volumes=${result.volume_count} chapters=${result.chapter_count} images=${result.image_count}`,
+  );
+}
+
+function cmdImportEpub(args: string[]): void {
+  const [epubPath, bookpackDir, ...flags] = args;
+  if (!epubPath || !bookpackDir) usage();
+  const opts = parseImportFlags(flags);
+  const result = importEpubToBookpack(epubPath, bookpackDir, opts);
+  console.log(`[import-epub] ${result.bookpack_dir}`);
+  console.log(
+    `  title=${result.title} volume=${result.volume_id} chapters=${result.chapter_count} ` +
+      `blocks=${result.block_count} images=${result.image_count}`,
+  );
+  if (result.validation) {
+    console.log(
+      `  validation=${result.validation.status} errors=${result.validation.errors.length} ` +
+        `warnings=${result.validation.warnings.length}`,
+    );
+  }
+}
+
+function cmdPrepareMimo(args: string[]): void {
+  const [bookpackDir, volumeId] = args;
+  if (!bookpackDir) usage();
+  const store = new FileStore(bookpackDir);
+  const result = prepareMimoCleaningInputs(store, volumeId);
+  console.log(`[prepare-mimo] ${result.output_dir}`);
+  console.log(`  tasks=${result.task_count} images=${result.image_count}`);
+  for (const task of result.tasks) {
+    console.log(
+      `  ${task.chapter_id}: blocks=${task.block_count} images=${task.image_count} file=${task.file}`,
+    );
+  }
+}
+
+async function cmdRunMimoCleaning(args: string[]): Promise<void> {
+  const [bookpackDir, taskFile] = args;
+  if (!bookpackDir || !taskFile) usage();
+  const store = new FileStore(bookpackDir);
+  const cfg = loadConfig();
+  const result = await runMimoCleaningTask(store, cfg, taskFile);
+  console.log(`[run-mimo-cleaning] ${result.output_file}`);
+  console.log(
+    `  task=${result.task_id} chapter=${result.chapter_id} model=${result.model} suggestions=${result.suggestion_count}`,
+  );
+  if (result.usage) console.log(`  usage=${JSON.stringify(result.usage)}`);
+}
+
+function parseImportFlags(flags: string[]): {
+  volumeId?: string;
+  seriesId?: string;
+  packId?: string;
+  packName?: string;
+  force?: boolean;
+  parseAndValidate?: boolean;
+} {
+  const opts: ReturnType<typeof parseImportFlags> = {};
+  for (let i = 0; i < flags.length; i++) {
+    const flag = flags[i]!;
+    if (flag === "--force") {
+      opts.force = true;
+    } else if (flag === "--no-validate") {
+      opts.parseAndValidate = false;
+    } else if (flag === "--volume-id") {
+      opts.volumeId = flags[++i];
+    } else if (flag === "--series-id") {
+      opts.seriesId = flags[++i];
+    } else if (flag === "--pack-id") {
+      opts.packId = flags[++i];
+    } else if (flag === "--pack-name") {
+      opts.packName = flags[++i];
+    } else {
+      throw new Error(`unknown import-epub flag: ${flag}`);
+    }
+  }
+  return opts;
+}
+
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   switch (command) {
@@ -172,6 +265,18 @@ async function main(): Promise<void> {
       break;
     case "describe-image":
       await cmdDescribeImage(rest);
+      break;
+    case "export-epub":
+      cmdExportEpub(rest);
+      break;
+    case "import-epub":
+      cmdImportEpub(rest);
+      break;
+    case "prepare-mimo":
+      cmdPrepareMimo(rest);
+      break;
+    case "run-mimo-cleaning":
+      await cmdRunMimoCleaning(rest);
       break;
     default:
       usage();

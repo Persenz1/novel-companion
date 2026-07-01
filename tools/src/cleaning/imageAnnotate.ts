@@ -74,7 +74,7 @@ export async function annotateAsset(
   const r = await chat(
     cfg.vision,
     [{ role: "user", content: [imagePart(bytes, mime), { type: "text", text: prompt }] }],
-    { maxCompletionTokens: 1600 },
+    { maxCompletionTokens: 1200, jsonMode: true, thinking: "disabled" },
   );
   const parsed = extractJson<{ alt?: string; description?: string }>(r.text);
   return {

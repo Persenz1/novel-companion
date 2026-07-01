@@ -24,6 +24,9 @@ import { CompiledQuery } from "./query.js";
 import { Validator } from "./validator.js";
 import { Compiler, CompileError } from "./compiler.js";
 import { listCleaningAssets, annotateAsset, setAssetAlt } from "./cleaning/imageAnnotate.js";
+import { importEpubToBookpack } from "./cleaning/epubImport.js";
+import { prepareMimoCleaningInputs } from "./cleaning/mimoFeed.js";
+import { runMimoCleaningTask } from "./cleaning/mimoRun.js";
 
 type Rec = Record<string, unknown>;
 
@@ -69,6 +72,26 @@ function openBookpack(cfg: WorkbenchConfig): FileStore {
   return store;
 }
 
+function readJsonIfExists<T>(store: FileStore, relative: string): T | null {
+  if (!store.exists(relative)) return null;
+  return store.readJson<T>(relative);
+}
+
+function safeReadBookpackJson(store: FileStore, relative: string): unknown {
+  const abs = path.resolve(store.root, relative);
+  if (!abs.startsWith(path.resolve(store.root))) throw new Error("路径越界。");
+  if (!fs.existsSync(abs)) throw new Error(`文件不存在：${relative}`);
+  return JSON.parse(fs.readFileSync(abs, "utf8")) as unknown;
+}
+
+function slugId(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase() || "imported_series";
+}
+
 function serveStatic(res: http.ServerResponse, urlPath: string): void {
   // "/" -> 工作台首页；"/reader/" -> 阅读器首页（其静态资源在 web/reader/ 下，用相对路径）。
   let rel: string;
@@ -91,6 +114,7 @@ function serveStatic(res: http.ServerResponse, urlPath: string): void {
 function mergeModel(old: ModelConfig, patch: Partial<ModelConfig> | undefined): ModelConfig {
   if (!patch) return old;
   return {
+    provider: patch.provider ?? old.provider ?? "auto",
     base_url: patch.base_url ?? old.base_url,
     model: patch.model ?? old.model,
     api_key: patch.api_key && patch.api_key.length > 0 ? patch.api_key : old.api_key,
@@ -277,6 +301,84 @@ async function handleApi(
   }
 
   // ---- 清洗·图片标注（Phase 1）----
+  if (pathname === "/api/cleaning/auto-start" && method === "POST") {
+    const body = await readBody(req);
+    const epubPath = String(body.epub_path ?? "").trim();
+    if (!epubPath) return sendJson(res, 400, { error: "epub_path 必填。" });
+    const stem = path.basename(epubPath, path.extname(epubPath));
+    const id = slugId(stem);
+    const targetDir = path.join("/tmp/novel-companion-cleaning", id);
+    const imported = importEpubToBookpack(epubPath, targetDir, {
+      volumeId: "v01",
+      seriesId: id,
+      packId: `${id}_project_v1`,
+      packName: stem,
+      force: true,
+      parseAndValidate: true,
+    });
+    const next = { ...cfg, bookpack_dir: targetDir };
+    saveConfig(next);
+    const store = new FileStore(targetDir);
+    const prepared = prepareMimoCleaningInputs(store, "v01");
+    return sendJson(res, 200, {
+      imported,
+      prepared,
+      target_dir: targetDir,
+      config: redactConfig(next),
+    });
+  }
+
+  if (pathname === "/api/cleaning/import-epub" && method === "POST") {
+    const body = await readBody(req);
+    const epubPath = String(body.epub_path ?? "");
+    const targetDir = String(body.target_dir ?? "");
+    if (!epubPath || !targetDir) return sendJson(res, 400, { error: "epub_path 和 target_dir 必填。" });
+    const result = importEpubToBookpack(epubPath, targetDir, {
+      volumeId: typeof body.volume_id === "string" && body.volume_id ? body.volume_id : undefined,
+      seriesId: typeof body.series_id === "string" && body.series_id ? body.series_id : undefined,
+      packId: typeof body.pack_id === "string" && body.pack_id ? body.pack_id : undefined,
+      packName: typeof body.pack_name === "string" && body.pack_name ? body.pack_name : undefined,
+      force: body.force === true,
+      parseAndValidate: true,
+    });
+    const next = { ...cfg, bookpack_dir: targetDir };
+    saveConfig(next);
+    return sendJson(res, 200, { ...result, config: redactConfig(next) });
+  }
+
+  if (pathname === "/api/cleaning/prepare-mimo" && method === "POST") {
+    const body = await readBody(req);
+    const result = prepareMimoCleaningInputs(
+      openBookpack(cfg),
+      typeof body.volume_id === "string" && body.volume_id ? body.volume_id : undefined,
+    );
+    return sendJson(res, 200, result);
+  }
+
+  if (pathname === "/api/cleaning/mimo-tasks" && method === "GET") {
+    const store = openBookpack(cfg);
+    const index = readJsonIfExists<Rec>(store, "reports/cleaning_mimo_inputs/index.json");
+    return sendJson(res, 200, { index });
+  }
+
+  if (pathname === "/api/cleaning/run-mimo" && method === "POST") {
+    const body = await readBody(req);
+    const taskFile = String(body.task_file ?? "");
+    if (!taskFile) return sendJson(res, 400, { error: "task_file 必填。" });
+    const store = openBookpack(cfg);
+    const result = await runMimoCleaningTask(store, cfg, taskFile);
+    const output = safeReadBookpackJson(store, result.output_file);
+    return sendJson(res, 200, { ...result, output });
+  }
+
+  if (pathname === "/api/cleaning/mimo-output" && method === "GET") {
+    const store = openBookpack(cfg);
+    const url = new URL(pathname + "?" + (req.url?.split("?")[1] ?? ""), "http://localhost");
+    const file = url.searchParams.get("file");
+    if (!file) return sendJson(res, 400, { error: "file 必填。" });
+    return sendJson(res, 200, { output: safeReadBookpackJson(store, file) });
+  }
+
   if (pathname === "/api/cleaning/assets" && method === "GET") {
     return sendJson(res, 200, { assets: listCleaningAssets(openBookpack(cfg)) });
   }

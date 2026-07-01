@@ -69,9 +69,20 @@ function appendJsonl(store: FileStore, file: string, rows: Rec[]): void {
 function tokenUsage(usage: Record<string, unknown> | undefined): Rec | undefined {
   if (!usage) return undefined;
   const out: Rec = {};
-  for (const key of ["prompt_tokens", "completion_tokens", "total_tokens"]) {
+  for (const key of [
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
+    "prompt_cache_hit_tokens",
+    "prompt_cache_miss_tokens",
+  ]) {
     const value = usage[key];
     if (typeof value === "number") out[key] = value;
+  }
+  const hit = out.prompt_cache_hit_tokens;
+  const miss = out.prompt_cache_miss_tokens;
+  if (typeof hit === "number" && typeof miss === "number" && hit + miss > 0) {
+    out.prompt_cache_hit_ratio = Number((hit / (hit + miss)).toFixed(4));
   }
   return Object.keys(out).length ? out : usage;
 }
@@ -217,7 +228,7 @@ export async function runDraft(
       { role: "user", content: buildDrafterUser(chapterTitle(manifest, chapterId), targetBlocks, background, accepted) },
     ],
     // max_tokens 顶高，避免多候选 JSON 被供应商较低的默认值截断成半截。
-    { jsonMode: true, temperature: 0.2, maxTokens: 8192 },
+    { jsonMode: true, temperature: 0.2, maxTokens: 8192, thinking: "disabled" },
   );
 
   const parsed = extractJson<{ candidates?: Rec[] }>(res.text);
@@ -319,7 +330,7 @@ export async function runReview(
         ),
       },
     ],
-    { jsonMode: true, temperature: 0.1 },
+    { jsonMode: true, temperature: 0.1, maxTokens: 8192, thinking: "disabled" },
   );
 
   const parsed = extractJson<{ decisions?: Rec[] }>(res.text);

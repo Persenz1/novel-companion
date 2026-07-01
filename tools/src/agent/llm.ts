@@ -4,6 +4,7 @@
 // 只依赖 /chat/completions 这一通用端点，DeepSeek、MiMo 等兼容 OpenAI 协议
 // 的供应商都能直接用。
 import type { ModelConfig } from "./config.js";
+import { buildChatRequest, type ChatOptions } from "./providers.js";
 
 /** 多模态内容分片：文本或图片（OpenAI 通用格式，图片走 base64 data URI 或公网 URL）。 */
 export type ContentPart =
@@ -24,48 +25,29 @@ export function imagePart(bytes: Uint8Array, mime: string): ContentPart {
 export interface ChatResult {
   text: string;
   model: string;
+  provider: string;
   usage?: Record<string, unknown>;
 }
 
 export class LlmError extends Error {}
 
-function joinUrl(base: string, suffix: string): string {
-  return base.replace(/\/+$/, "") + suffix;
-}
-
 /** 调用一次 chat completion，返回首条回复文本。 */
 export async function chat(
   cfg: ModelConfig,
   messages: ChatMessage[],
-  opts: { temperature?: number; jsonMode?: boolean; maxTokens?: number; maxCompletionTokens?: number; signal?: AbortSignal } = {},
+  opts: ChatOptions = {},
 ): Promise<ChatResult> {
   if (!cfg.base_url || !cfg.api_key || !cfg.model)
     throw new LlmError("模型未配置：base_url / api_key / model 必填。");
 
-  const body: Record<string, unknown> = {
-    model: cfg.model,
-    messages,
-    temperature: opts.temperature ?? 0.2,
-  };
-  if (opts.jsonMode) body.response_format = { type: "json_object" };
-  // 两套上限参数按供应商区分，避免相互污染：
-  //   DeepSeek（及多数 OpenAI 兼容供应商）用 max_tokens；
-  //   MiMo 等推理模型用 max_completion_tokens。
-  // 只在调用方指定时各自下发，未知字段会被对端忽略。
-  if (opts.maxTokens) body.max_tokens = opts.maxTokens;
-  if (opts.maxCompletionTokens) body.max_completion_tokens = opts.maxCompletionTokens;
+  const req = buildChatRequest(cfg, messages, { temperature: 0.2, ...opts });
 
   let resp: Response;
   try {
-    resp = await fetch(joinUrl(cfg.base_url, "/chat/completions"), {
+    resp = await fetch(req.url, {
       method: "POST",
-      // 同时带 Authorization: Bearer 和 api-key：DeepSeek 认前者、MiMo 认后者，未知头会被忽略。
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${cfg.api_key}`,
-        "api-key": cfg.api_key,
-      },
-      body: JSON.stringify(body),
+      headers: req.headers,
+      body: JSON.stringify(req.body),
       signal: opts.signal,
     });
   } catch (err) {
@@ -83,7 +65,7 @@ export async function chat(
   };
   const text = data.choices?.[0]?.message?.content;
   if (typeof text !== "string") throw new LlmError("模型响应缺少 choices[0].message.content。");
-  return { text, model: cfg.model, usage: data.usage };
+  return { text, model: cfg.model, provider: req.provider, usage: data.usage };
 }
 
 /**

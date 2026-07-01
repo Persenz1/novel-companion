@@ -12,12 +12,15 @@
 
 - `modules/bookpack-data.md`：bookpack、Markdown、Parsed / Accepted / Candidate / Review 文件。
 - `modules/toolchain.md`：CLI、Parser、Validator、Compiler、测试命令。
+- `modules/cleaning-pipeline.md`：EPUB 导入、AI 清洗、写回 bookpack 的前端清洗流水线。
+- `modules/provider-adapters.md`：DeepSeek / MiMo 等模型供应商适配层。
 - `modules/ai-workbench.md`：AI 起草、独立复核、数据工作台、Change 和回滚。
 - `modules/compiled-query.md`：`reader_index.json` 与 `getVisibleContext()`。
 - `modules/reader.md`：Markdown 阅读器（已实现）＋ 中日双语逐段显示。
 - `modules/test-fixture.md`：gray-tower 4 卷样例包、fixture 和验收边界。
 - `modules/long-range-test.md`：跨卷上下文的测试执行手册。
 - `modules/long-range-test-phase-a-2026-07-01.md`：DeepSeek 四卷 Phase A 长程压力测试结果与下一步。
+- `modules/next-session-cleaning-and-multivolume.md`：下一轮多卷清洗、多卷操作和成本排查计划。
 
 ## 当前判断规则
 
