@@ -1,7 +1,7 @@
 {
   "schema_version": "0.1.0",
   "series_id": "gray_tower",
-  "generated_at": "2026-07-01T08:53:42.911Z",
+  "generated_at": "2026-07-01T13:52:12.112Z",
   "source_fingerprint": null,
   "source_summary": {
     "manifest_path": "manifest.json",
@@ -3657,36 +3657,36 @@
     "v01_img_003": {
       "id": "v01_img_003",
       "type": "image",
-      "path": "assets/images/v01_img_003.svg",
-      "alt": "灰塔学院校门远景",
+      "path": "assets/images/v01_img_003.png",
+      "alt": "灰塔学院夜景",
       "source_volume_id": "v01"
     },
     "v01_img_001": {
       "id": "v01_img_001",
       "type": "image",
-      "path": "assets/images/v01_img_001.svg",
-      "alt": "林澈站在校门前的背影",
+      "path": "assets/images/v01_img_001.png",
+      "alt": "林澈的立绘",
       "source_volume_id": "v01"
     },
     "v01_img_002": {
       "id": "v01_img_002",
       "type": "image",
-      "path": "assets/images/v01_img_002.svg",
-      "alt": "D班教室全景",
+      "path": "assets/images/v01_img_002.png",
+      "alt": "银发少女读信",
       "source_volume_id": "v01"
     },
     "v01_img_005": {
       "id": "v01_img_005",
       "type": "image",
-      "path": "assets/images/v01_img_005.svg",
-      "alt": "跨班会议中林澈与沈砚的合照",
+      "path": "assets/images/v01_img_005.png",
+      "alt": "灰塔学院学生群像",
       "source_volume_id": "v01"
     },
     "v01_img_004": {
       "id": "v01_img_004",
       "type": "image",
-      "path": "assets/images/v01_img_004.svg",
-      "alt": "体育馆考场布置",
+      "path": "assets/images/v01_img_004.png",
+      "alt": "班级点数排行榜",
       "source_volume_id": "v01"
     }
   },
