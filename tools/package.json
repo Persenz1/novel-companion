@@ -10,6 +10,7 @@
   "scripts": {
     "parse": "tsx src/cli.ts parse",
     "workbench": "tsx src/server.ts",
+    "reader": "tsx src/reader.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test \"src/**/*.test.ts\""
   },

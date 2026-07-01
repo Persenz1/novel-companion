@@ -76,12 +76,16 @@ export class AgentStore {
     const now = new Date().toISOString();
     const changeId = this.nextChangeId();
 
-    const accepted: Rec = {
+    const rows = this.acceptedRows(file);
+    const existingIdx = rows.findIndex((r) => (r as { id?: string }).id === targetId);
+    const before = existingIdx >= 0 ? rows[existingIdx]! : null;
+    const accepted = mergeAccepted(type, before, {
       ...draft,
+      series_id: this.seriesId,
       status: (draft.status as string) ?? "accepted",
-      created_change_id: changeId,
-      updated_change_ids: [],
-    };
+      created_change_id: before ? before.created_change_id : changeId,
+      updated_change_ids: before ? [...(((before.updated_change_ids as string[]) ?? [])), changeId] : [],
+    });
     const change: Rec = {
       id: changeId,
       series_id: this.seriesId,
@@ -90,7 +94,7 @@ export class AgentStore {
       target_type: type,
       target_id: targetId,
       ...(meta.candidateId ? { candidate_id: meta.candidateId } : {}),
-      before: null,
+      before: before ? { target_id: targetId } : null,
       after: { target_id: targetId },
       reason: meta.reason,
       ...(draft.source_span ? { source_span: draft.source_span } : {}),
@@ -102,9 +106,7 @@ export class AgentStore {
       created_at: now,
     };
 
-    const rows = this.acceptedRows(file);
     // 同 id 已存在则视为更新（替换），避免重复落盘。
-    const existingIdx = rows.findIndex((r) => (r as { id?: string }).id === targetId);
     if (existingIdx >= 0) rows[existingIdx] = accepted;
     else rows.push(accepted);
     this.store.writeJsonl(file, rows);
@@ -147,4 +149,27 @@ export class AgentStore {
     }
     return { reverted };
   }
+}
+
+function mergeAccepted(type: string, before: Rec | null, next: Rec): Rec {
+  if (!before) return next;
+  const merged: Rec = { ...before, ...next };
+  merged.created_change_id = before.created_change_id ?? next.created_change_id;
+  merged.updated_change_ids = next.updated_change_ids;
+
+  if (type === "entity") {
+    merged.first_seen = before.first_seen ?? next.first_seen;
+    merged.source_span = before.source_span ?? next.source_span;
+    const aliases = new Set<string>();
+    for (const alias of (before.aliases as string[]) ?? []) aliases.add(alias);
+    for (const alias of (next.aliases as string[]) ?? []) aliases.add(alias);
+    merged.aliases = [...aliases];
+  }
+  if (type === "metric") {
+    for (const key of ["subject_id", "name", "metric_type", "unit", "value_type", "visible_from", "source_span"]) {
+      merged[key] = before[key] ?? next[key];
+    }
+  }
+
+  return merged;
 }

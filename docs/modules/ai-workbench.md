@@ -18,9 +18,11 @@
 
 ## 已实现
 
-服务器：`tools/src/server.ts`
+服务器：`tools/src/server.ts`（`npm run workbench`）。**已与阅读器合并**：同一服务器同时提供工作台（`/`）和阅读器（`/reader/`），共用同一份 `.workbench-config.json`（bookpack 路径 ＋ API key），顶栏互相跳转。读侧视图逻辑在 `tools/src/readerView.ts`，工作台与独立阅读器（`tools/src/reader.ts`）共用。
 
-前端：`tools/web/*`
+已用 DeepSeek 实跑验证（drafter=`deepseek-chat`、reviewer=`deepseek-reasoner`）：起草产出语义稳定实体 ID，章内 / 跨卷复用已确认实体不重造，复核干净项 auto 落盘；四卷长程实测结果见 [long-range-test-phase-a-2026-07-01](long-range-test-phase-a-2026-07-01.md)。
+
+前端：`tools/web/*`（工作台）、`tools/web/reader/*`（阅读器）
 
 Agent 模块：
 
@@ -51,9 +53,9 @@ Agent 模块：
 
 - 目标章节正文。
 - 目标章节所属整卷正文，作为背景。
-- 已确认实体列表。
+- 全局 Accepted 结构化记忆；提示词当前主要渲染已确认实体名册。
 
-这能改善卷内连续性，但不能解决第二卷及后续卷的前文压缩问题。事实、事件、关系、数值、角色卡和 OpenQuestion 尚未作为结构化历史上下文注入提示词。
+这已经支撑 gray-tower `v01`-`v04` Phase A 长程压力测试：不加入前卷原文 / 前卷梗概时，核心实体复用、许映白伏笔回收、未寄出的名单长线和 D 班点数弧线均跑通。仍未完成的是 Phase B 增强档：把事实、事件、关系、数值、角色卡和 OpenQuestion 压缩成可预算的前文上下文，供真实书籍或质量 / 成本对照使用。
 
 ## 配置与安全
 
@@ -68,6 +70,9 @@ Agent 模块：
 - 写目标 Accepted 文件。
 - 写 `accepted/changes.jsonl`。
 - 标记 `decided_by`、`auto_accepted`、`reviewer_model`、`work_run_id`。
+- 记录模型 `token_usage` 到 `reports/work_runs.jsonl`。
+
+自动落盘前会做引用守卫：引用不存在或只在同批候选中无法落盘的草案会升级到 review item；非实体 / 非 metric 的同 ID 不同内容不再静默覆盖。`AgentStore.mergeAccepted()` 会保留实体 `first_seen` / `source_span` / aliases，并避免样例包 `series_id` 被模型输出带偏。
 
 当前回滚支持：
 
@@ -81,8 +86,9 @@ Agent 模块：
 
 ## 未完成
 
+- review item 批量裁决 / 批量转 OpenQuestion。
 - 真实书籍长程制作压测。
-- 第二卷前文上下文压缩 / 检索。
+- Phase B 前文上下文压缩 / 检索（gray-tower Phase A 暂不阻塞）。
 - 任意 scene / block range / 整卷作业。
 - token 预算器。
 - LLM JSON schema 修复与重试。

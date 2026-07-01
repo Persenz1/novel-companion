@@ -18,6 +18,8 @@ import {
 import { WorkbenchData } from "./agent/workbenchData.js";
 import { AgentStore } from "./agent/agentStore.js";
 import { runDraft, runReview, resolveException } from "./agent/pipeline.js";
+import { buildReaderBook } from "./readerView.js";
+import { CompiledQuery } from "./query.js";
 
 type Rec = Record<string, unknown>;
 
@@ -64,7 +66,11 @@ function openBookpack(cfg: WorkbenchConfig): FileStore {
 }
 
 function serveStatic(res: http.ServerResponse, urlPath: string): void {
-  const rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
+  // "/" -> 工作台首页；"/reader/" -> 阅读器首页（其静态资源在 web/reader/ 下，用相对路径）。
+  let rel: string;
+  if (urlPath === "/") rel = "index.html";
+  else if (urlPath === "/reader/") rel = "reader/index.html";
+  else rel = urlPath.replace(/^\/+/, "");
   const filePath = path.resolve(WEB_DIR, rel);
   if (!filePath.startsWith(WEB_DIR) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
@@ -121,6 +127,25 @@ async function handleApi(
   if (pathname === "/api/chapters" && method === "GET") {
     const data = new WorkbenchData(openBookpack(cfg));
     return sendJson(res, 200, { chapters: data.chapters() });
+  }
+
+  // 阅读器视图（与工作台共用同一 bookpack 配置）：按阅读顺序展开的中日双语正文。
+  if (pathname === "/api/book" && method === "GET") {
+    return sendJson(res, 200, buildReaderBook(openBookpack(cfg)));
+  }
+
+  // 阅读器防剧透查询：完全复用 CompiledQuery，read_boundary 是唯一可见边界。
+  if (pathname === "/api/context" && method === "GET") {
+    const store = openBookpack(cfg);
+    const url = new URL(pathname + "?" + (req.url?.split("?")[1] ?? ""), "http://localhost");
+    if (!store.exists("compiled/reader_index.json"))
+      return sendJson(res, 409, { error: "缺少 compiled/reader_index.json，请先 validate + compile。" });
+    const ctx = CompiledQuery.load(store).getVisibleContext(
+      url.searchParams.get("current_block") ?? "",
+      url.searchParams.get("read_boundary") ?? "",
+      { includeJa: url.searchParams.get("ja") === "1" },
+    );
+    return sendJson(res, 200, ctx);
   }
 
   const chBlocks = pathname.match(/^\/api\/chapters\/([^/]+)\/blocks$/);
@@ -236,6 +261,11 @@ const server = http.createServer((req, res) => {
   const pathname = url.pathname;
   if (pathname.startsWith("/api/")) {
     handleApi(req, res, pathname).catch((err) => sendJson(res, 400, { error: (err as Error).message }));
+    return;
+  }
+  if (pathname === "/reader") {
+    res.writeHead(302, { location: "/reader/" });
+    res.end();
     return;
   }
   serveStatic(res, pathname);

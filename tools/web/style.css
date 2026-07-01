@@ -43,6 +43,8 @@ button {
 button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 button.primary:disabled { background: #aab4c4; border-color: #aab4c4; cursor: not-allowed; }
 button.ghost { background: transparent; }
+.navlink { text-decoration: none; color: var(--ink); display: inline-block; }
+.navlink:hover { background: var(--accent-soft); }
 button.tiny { padding: 3px 8px; font-size: 12px; }
 button.danger { color: var(--red); border-color: #e6b0aa; }
 

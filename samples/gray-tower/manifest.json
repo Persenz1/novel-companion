@@ -44,6 +44,47 @@
           "title": "终章：未寄出的名单"
         }
       ]
+    },
+    {
+      "id": "v02",
+      "title": "第二卷",
+      "main_text": "parsed/volumes/v02.md",
+      "chapters": [
+        { "id": "v02.prologue", "order": 0, "kind": "prologue", "title": "序章：第一次待遇调整" },
+        { "id": "v02.c01", "order": 1, "kind": "chapter", "title": "第一章：影子分组" },
+        { "id": "v02.c02", "order": 2, "kind": "chapter", "title": "第二章：谨慎的同盟" },
+        { "id": "v02.c03", "order": 3, "kind": "chapter", "title": "第三章：被拆散的人" },
+        { "id": "v02.c04", "order": 4, "kind": "chapter", "title": "第四章：联合评估" },
+        { "id": "v02.epilogue", "order": 5, "kind": "epilogue", "title": "终章：半个真相" }
+      ]
+    },
+    {
+      "id": "v03",
+      "title": "第三卷",
+      "main_text": "parsed/volumes/v03.md",
+      "chapters": [
+        { "id": "v03.prologue", "order": 0, "kind": "prologue", "title": "序章：分层选拔" },
+        { "id": "v03.c01", "order": 1, "kind": "chapter", "title": "第一章：空白档案" },
+        { "id": "v03.c02", "order": 2, "kind": "chapter", "title": "第二章：记录员的立场" },
+        { "id": "v03.c03", "order": 3, "kind": "chapter", "title": "第三章：创始章程" },
+        { "id": "v03.c04", "order": 4, "kind": "chapter", "title": "第四章：不是真正的学生" },
+        { "id": "v03.c05", "order": 5, "kind": "chapter", "title": "第五章：裂痕" },
+        { "id": "v03.epilogue", "order": 6, "kind": "epilogue", "title": "终章：她的选择" }
+      ]
+    },
+    {
+      "id": "v04",
+      "title": "第四卷",
+      "main_text": "parsed/volumes/v04.md",
+      "chapters": [
+        { "id": "v04.prologue", "order": 0, "kind": "prologue", "title": "序章：塔顶选拔" },
+        { "id": "v04.c01", "order": 1, "kind": "chapter", "title": "第一章：集结" },
+        { "id": "v04.c02", "order": 2, "kind": "chapter", "title": "第二章：规则陷阱" },
+        { "id": "v04.c03", "order": 3, "kind": "chapter", "title": "第三章：记录员倒戈" },
+        { "id": "v04.c04", "order": 4, "kind": "chapter", "title": "第四章：塔顶对决" },
+        { "id": "v04.c05", "order": 5, "kind": "chapter", "title": "第五章：请求" },
+        { "id": "v04.epilogue", "order": 6, "kind": "epilogue", "title": "终章：灰塔之后" }
+      ]
     }
   ],
   "features": {

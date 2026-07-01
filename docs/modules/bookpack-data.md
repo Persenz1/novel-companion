@@ -91,4 +91,4 @@ Candidate 是起草到复核之间的中间格式，不是最终 UI 的主操作
 
 - reader 包导出规则尚未实现。
 - text hash / source fingerprint 仍是预留。
-- 跨卷历史上下文还没有数据格式产物，例如卷末压缩记忆或检索索引。
+- Phase B 跨卷历史上下文还没有数据格式产物，例如卷末压缩记忆或检索索引；gray-tower Phase A 已先用全局 Accepted + 当前卷正文跑通四卷。

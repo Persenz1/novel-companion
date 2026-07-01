@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>小说陪读 · 阅读器</title>
+    <link rel="stylesheet" href="reader.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">小说陪读 · 阅读器</div>
+      <div class="pack" id="pack-status">加载中…</div>
+      <div class="toolbar">
+        <a class="ghost navlink" href="/">数据工作台</a>
+        <button class="ghost" id="btn-toc">目录</button>
+        <label class="disp"><span>显示</span>
+          <select id="disp-mode">
+            <option value="both">中日双语</option>
+            <option value="zh">仅中文</option>
+            <option value="ja">仅日文</option>
+          </select>
+        </label>
+        <button class="ghost" id="btn-return" title="回到已读边界">返回已读处</button>
+        <button class="primary" id="btn-mark" title="把已读边界推进到当前位置">标记读到此处</button>
+      </div>
+    </header>
+
+    <div class="boundary-bar" id="boundary-bar">
+      <span id="boundary-label">已读边界：—</span>
+      <span class="preview-flag" id="preview-flag" hidden>越界预览中 · 增强信息仍按已读边界显示</span>
+    </div>
+
+    <main class="layout">
+      <!-- 目录：独立一栏，展开时推开正文 -->
+      <nav class="drawer" id="toc-drawer">
+        <div class="drawer-head">目录</div>
+        <ul id="toc-list"></ul>
+      </nav>
+
+      <!-- 中栏：正文 -->
+      <section class="col-read" id="reader-scroll">
+        <div class="reading-ruler" id="reading-ruler" aria-hidden="true"></div>
+        <article class="prose" id="prose"></article>
+      </section>
+
+      <!-- 右栏：防剧透增强面板 -->
+      <aside class="col-panel" id="panel">
+        <div class="panel-head">
+          <span id="panel-title">当前位置</span>
+          <span class="panel-sub" id="panel-sub"></span>
+        </div>
+        <div class="panel-body" id="panel-body"></div>
+      </aside>
+    </main>
+
+    <div class="toast" id="toast" hidden></div>
+    <script type="module" src="reader.js"></script>
+  </body>
+</html>

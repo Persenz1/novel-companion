@@ -14,8 +14,10 @@
 - `modules/toolchain.md`：CLI、Parser、Validator、Compiler、测试命令。
 - `modules/ai-workbench.md`：AI 起草、独立复核、数据工作台、Change 和回滚。
 - `modules/compiled-query.md`：`reader_index.json` 与 `getVisibleContext()`。
-- `modules/reader.md`：最低限度 Markdown 阅读器的需求与未实现项。
-- `modules/test-fixture.md`：gray-tower 样例包、fixture 和验收边界。
+- `modules/reader.md`：Markdown 阅读器（已实现）＋ 中日双语逐段显示。
+- `modules/test-fixture.md`：gray-tower 4 卷样例包、fixture 和验收边界。
+- `modules/long-range-test.md`：跨卷上下文的测试执行手册。
+- `modules/long-range-test-phase-a-2026-07-01.md`：DeepSeek 四卷 Phase A 长程压力测试结果与下一步。
 
 ## 当前判断规则
 

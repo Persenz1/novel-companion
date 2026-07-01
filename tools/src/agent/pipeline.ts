@@ -66,6 +66,127 @@ function appendJsonl(store: FileStore, file: string, rows: Rec[]): void {
   store.writeJsonl(file, existing.concat(rows));
 }
 
+function tokenUsage(usage: Record<string, unknown> | undefined): Rec | undefined {
+  if (!usage) return undefined;
+  const out: Rec = {};
+  for (const key of ["prompt_tokens", "completion_tokens", "total_tokens"]) {
+    const value = usage[key];
+    if (typeof value === "number") out[key] = value;
+  }
+  return Object.keys(out).length ? out : usage;
+}
+
+function setOfIds(rows: Rec[] | undefined): Set<string> {
+  return new Set((rows ?? []).map((r) => String((r as { id?: string }).id ?? "")).filter(Boolean));
+}
+
+function collectAutoDraftIds(pending: Candidate[], decisions: Map<string, Rec>): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const c of pending) {
+    const d = decisions.get(c.id);
+    if (String((d as { route?: string })?.route ?? "escalate") !== "auto") continue;
+    const edited = (d as { edited_draft?: Rec })?.edited_draft;
+    const draft = (edited && Object.keys(edited).length ? edited : c.payload.draft) as Rec | undefined;
+    const id = String((draft as { id?: string } | undefined)?.id ?? "");
+    if (!id) continue;
+    const ids = out.get(c.type) ?? new Set<string>();
+    ids.add(id);
+    out.set(c.type, ids);
+  }
+  return out;
+}
+
+function idsFor(accepted: Map<string, Rec[]>, autoDraftIds: Map<string, Set<string>>, type: string): Set<string> {
+  return new Set([...setOfIds(accepted.get(type)), ...(autoDraftIds.get(type) ?? [])]);
+}
+
+function missingRefs(values: unknown, allowed: Set<string>): string[] {
+  const refs = Array.isArray(values) ? values : values ? [values] : [];
+  return refs.map(String).filter((ref) => ref && !allowed.has(ref));
+}
+
+function comparableDraft(r: Rec): string {
+  const skip = new Set(["series_id", "status", "created_change_id", "updated_change_ids"]);
+  const out: Rec = {};
+  for (const key of Object.keys(r).sort()) {
+    if (!skip.has(key)) out[key] = r[key];
+  }
+  return JSON.stringify(out);
+}
+
+function autoAcceptBlockers(
+  type: string,
+  draft: Rec,
+  accepted: Map<string, Rec[]>,
+  autoDraftIds: Map<string, Set<string>>,
+): string[] {
+  const entities = idsFor(accepted, autoDraftIds, "entity");
+  const events = idsFor(accepted, autoDraftIds, "event");
+  const metrics = idsFor(accepted, autoDraftIds, "metric");
+  const acceptedIds = new Set([...accepted.values()].flatMap((rows) => rows.map((r) => String((r as { id?: string }).id ?? "")).filter(Boolean)));
+  const blockers: string[] = [];
+  const draftId = String((draft as { id?: string }).id ?? "");
+  const existing = (accepted.get(type) ?? []).find((r) => String((r as { id?: string }).id ?? "") === draftId);
+  if (existing && type !== "entity" && type !== "metric" && comparableDraft(existing) !== comparableDraft(draft)) {
+    blockers.push(`Accepted 已存在同 ID ${draftId} 但内容不同，不能自动覆盖`);
+  }
+  const required = (label: string, value: unknown) => {
+    if (value === undefined || value === null || value === "") blockers.push(`${label} 缺失`);
+  };
+  const check = (label: string, values: unknown, allowed: Set<string>) => {
+    const missing = missingRefs(values, allowed);
+    if (missing.length) blockers.push(`${label} 引用不存在或类型不对：${missing.join(", ")}`);
+  };
+
+  switch (type) {
+    case "fact":
+      required("subject_id", draft.subject_id);
+      check("subject_id", draft.subject_id, entities);
+      if (draft.value_type === "entity") {
+        required("value_entity_id", draft.value_entity_id);
+        check("value_entity_id", draft.value_entity_id, entities);
+      }
+      break;
+    case "event":
+      check("participants", draft.participants, entities);
+      check("related_entities", draft.related_entities, entities);
+      break;
+    case "relation_change":
+      required("entities", draft.entities);
+      check("entities", draft.entities, entities);
+      if (draft.event_id) check("event_id", draft.event_id, events);
+      break;
+    case "metric":
+      required("subject_id", draft.subject_id);
+      check("subject_id", draft.subject_id, entities);
+      break;
+    case "metric_change":
+      required("metric_id", draft.metric_id);
+      check("metric_id", draft.metric_id, metrics);
+      if (draft.reason_event_id) check("reason_event_id", draft.reason_event_id, events);
+      break;
+    case "term_card":
+      required("term_entity_id", draft.term_entity_id);
+      check("term_entity_id", draft.term_entity_id, entities);
+      break;
+    case "character_card":
+      required("entity_id", draft.entity_id);
+      check("entity_id", draft.entity_id, entities);
+      check("source_refs", draft.source_refs, acceptedIds);
+      break;
+    case "speaker_label":
+      if (draft.speaker_type === "entity") {
+        required("speaker_entity_id", draft.speaker_entity_id);
+        check("speaker_entity_id", draft.speaker_entity_id, entities);
+      }
+      break;
+    case "asset_subject":
+      if (draft.entity_id) check("entity_id", draft.entity_id, entities);
+      break;
+  }
+  return blockers;
+}
+
 // ----- 起草 -----
 
 export interface DraftResult {
@@ -146,6 +267,7 @@ export async function runDraft(
       created_candidate_count: created.length,
       drafter_model: res.model,
       context_estimate: { target_blocks: targetBlocks.length, background_blocks: background.flatMap((s) => s.blocks).length },
+      ...(tokenUsage(res.usage) ? { token_usage: tokenUsage(res.usage) } : {}),
       created_at: new Date().toISOString(),
     },
   ]);
@@ -202,6 +324,7 @@ export async function runReview(
   const parsed = extractJson<{ decisions?: Rec[] }>(res.text);
   const decisions = new Map<string, Rec>();
   for (const d of parsed.decisions ?? []) decisions.set(String((d as { candidate_id?: string }).candidate_id), d);
+  const autoDraftIds = collectAutoDraftIds(pending, decisions);
 
   const agentStore = new AgentStore(store, manifest.series.id);
   const workRunId = `work_${chapterKey(chapterId)}_review_${Date.now().toString(36)}`;
@@ -227,6 +350,22 @@ export async function runReview(
       if (!draft || !draft.id) {
         // 草案不完整，安全起见改为升级。
         newReviewItems.push(buildReviewItem(mkReviewId(escalated + 1), c, "草案缺少 id，复核改判升级。", chapterId, manifest.series.id));
+        target.status = "converted_to_review_item";
+        escalated += 1;
+        return;
+      }
+      const blockers = autoAcceptBlockers(c.type, draft, accepted, autoDraftIds);
+      if (blockers.length) {
+        newReviewItems.push(
+          buildReviewItem(
+            mkReviewId(escalated + 1),
+            c,
+            `自动写入前校验失败：${blockers.join("；")}。`,
+            chapterId,
+            manifest.series.id,
+            "改后接受或转未决问题",
+          ),
+        );
         target.status = "converted_to_review_item";
         escalated += 1;
         return;
@@ -268,6 +407,7 @@ export async function runReview(
       rejected_count: rejected,
       drafter_model: pending[0]?.model ?? "",
       reviewer_model: res.model,
+      ...(tokenUsage(res.usage) ? { token_usage: tokenUsage(res.usage) } : {}),
       created_at: new Date().toISOString(),
     },
   ]);

@@ -1,6 +1,6 @@
 {
   "status": "ok",
-  "generated_at": "2026-06-30T04:46:09.179Z",
+  "generated_at": "2026-07-01T06:42:34.689Z",
   "generator": "novel-companion-tools/parser@0.1.0",
   "volumes": [
     {
@@ -11,11 +11,38 @@
       "scene_count": 5,
       "asset_count": 5,
       "alignment_count": 4
+    },
+    {
+      "volume_id": "v02",
+      "main_text": "parsed/volumes/v02.md",
+      "chapter_count": 6,
+      "block_count": 42,
+      "scene_count": 6,
+      "asset_count": 0,
+      "alignment_count": 0
+    },
+    {
+      "volume_id": "v03",
+      "main_text": "parsed/volumes/v03.md",
+      "chapter_count": 7,
+      "block_count": 49,
+      "scene_count": 7,
+      "asset_count": 0,
+      "alignment_count": 0
+    },
+    {
+      "volume_id": "v04",
+      "main_text": "parsed/volumes/v04.md",
+      "chapter_count": 7,
+      "block_count": 49,
+      "scene_count": 7,
+      "asset_count": 0,
+      "alignment_count": 0
     }
   ],
   "counts": {
-    "blocks": 41,
-    "scenes": 5,
+    "blocks": 181,
+    "scenes": 25,
     "assets": 5,
     "asset_anchors": 5,
     "alignments": 4

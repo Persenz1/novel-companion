@@ -2,7 +2,15 @@
 
 ## 状态
 
-最低限度 Markdown 阅读器尚未实现。当前只有 compiled 查询接口和数据工作台。
+最低限度 Markdown 阅读器已实现（`tools/src/reader.ts` + `tools/web/reader/`，`npm run reader`）。只读 manifest / Parsed / Compiled，防剧透查询完全复用 `CompiledQuery.getVisibleContext`。已按当前样例包 typecheck + 接口冒烟验证；真实书籍长程阅读体验尚未压测。
+
+启动方式二选一：
+
+```bash
+npm run workbench   # 推荐：工作台 + 阅读器合并，阅读器在 http://localhost:4173/reader/（共用工作台配置的 bookpack）
+npm run reader      # 独立只读阅读器，默认读 ../samples/gray-tower，端口 4174
+npx tsx src/reader.ts <bookpack-dir>   # 独立阅读器指定数据包
+```
 
 ## 需求
 
@@ -21,7 +29,11 @@
 - 支持“标记至当前 block 为已读”。
 - 支持“返回 read_boundary”。
 - 右侧增强面板调用 `getVisibleContext()`。
-- 支持中文 / 中文 + 日文参考切换。
+- 中日双语显示：逐段交替（中文段 + 其日文段），可切换 中日双语 / 仅中文 / 仅日文。
+
+## 中日双语（真正双语，非参考对照）
+
+日文是每个 block 的 1:1 并列正文，不是可隐藏的脚注。存储在 `source/ja/{volume}.blocks.json`（`block_id -> 日文`），由阅读器侧 `/api/book` 合并出 `text_ja` 并逐段交替渲染。中文正文仍是唯一时间线主轴与防剧透基准，日文不建立独立阅读进度。核心 parser / validator / compiler / 数据 schema 不受影响（双语是阅读器侧读入的授权文本）。
 
 ## 验收
 
