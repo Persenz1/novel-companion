@@ -23,6 +23,7 @@ import { buildReaderBook } from "./readerView.js";
 import { CompiledQuery } from "./query.js";
 import { Validator } from "./validator.js";
 import { Compiler, CompileError } from "./compiler.js";
+import { listCleaningAssets, annotateAsset, setAssetAlt } from "./cleaning/imageAnnotate.js";
 
 type Rec = Record<string, unknown>;
 
@@ -73,6 +74,7 @@ function serveStatic(res: http.ServerResponse, urlPath: string): void {
   let rel: string;
   if (urlPath === "/") rel = "index.html";
   else if (urlPath === "/reader/") rel = "reader/index.html";
+  else if (urlPath === "/cleaning/") rel = "cleaning/index.html";
   else rel = urlPath.replace(/^\/+/, "");
   const filePath = path.resolve(WEB_DIR, rel);
   if (!filePath.startsWith(WEB_DIR) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
@@ -274,6 +276,30 @@ async function handleApi(
     }
   }
 
+  // ---- 清洗·图片标注（Phase 1）----
+  if (pathname === "/api/cleaning/assets" && method === "GET") {
+    return sendJson(res, 200, { assets: listCleaningAssets(openBookpack(cfg)) });
+  }
+
+  if (pathname === "/api/cleaning/annotate" && method === "POST") {
+    const body = await readBody(req);
+    const annotation = await annotateAsset(
+      openBookpack(cfg),
+      cfg,
+      String(body.asset_id),
+      typeof body.roster === "string" ? body.roster : undefined,
+    );
+    return sendJson(res, 200, annotation);
+  }
+
+  if (pathname === "/api/cleaning/set-alt" && method === "POST") {
+    const body = await readBody(req);
+    const store = openBookpack(cfg);
+    setAssetAlt(store, String(body.asset_id), String(body.alt ?? ""));
+    const asset = listCleaningAssets(store).find((a) => a.id === String(body.asset_id));
+    return sendJson(res, 200, { ok: true, asset });
+  }
+
   if (pathname === "/api/changes" && method === "GET") {
     const store = openBookpack(cfg);
     const m = new WorkbenchData(store).manifest();
@@ -300,6 +326,11 @@ const server = http.createServer((req, res) => {
   const pathname = url.pathname;
   if (pathname.startsWith("/api/")) {
     handleApi(req, res, pathname).catch((err) => sendJson(res, 400, { error: (err as Error).message }));
+    return;
+  }
+  if (pathname === "/cleaning") {
+    res.writeHead(302, { location: "/cleaning/" });
+    res.end();
     return;
   }
   if (pathname === "/reader") {

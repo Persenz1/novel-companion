@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>清洗 · 图片标注</title>
+  <style>
+    :root { --bg:#14161a; --panel:#1c1f26; --border:#2c313b; --muted:#8b93a1; --fg:#e6e9ef; --accent:#5b9bd5; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.6 system-ui, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    header { display:flex; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid var(--border); background:var(--panel); position:sticky; top:0; z-index:5; }
+    header h1 { font-size:16px; margin:0; }
+    header a { color:var(--accent); text-decoration:none; font-size:13px; }
+    .wrap { max-width:1000px; margin:0 auto; padding:18px; }
+    .roster { width:100%; background:var(--panel); color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:10px; font:13px/1.5 inherit; resize:vertical; min-height:52px; }
+    .hint { color:var(--muted); font-size:12px; margin:6px 0 16px; }
+    .card { display:grid; grid-template-columns:200px 1fr; gap:16px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:16px; }
+    .card img { width:100%; border-radius:6px; background:#000; }
+    .meta { color:var(--muted); font-size:12px; margin-bottom:6px; }
+    .meta b { color:var(--fg); }
+    label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+    .alt { width:100%; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:8px; font:14px inherit; }
+    .desc { white-space:pre-wrap; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px; font-size:13px; color:#cdd3dd; margin-top:6px; max-height:180px; overflow:auto; }
+    button { background:#2a2f3a; color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:6px 12px; font-size:13px; cursor:pointer; }
+    button.primary { background:var(--accent); border-color:var(--accent); color:#0b0f14; font-weight:600; }
+    button:disabled { opacity:.5; cursor:default; }
+    .row { display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+    .tag { font-size:11px; padding:2px 7px; border-radius:10px; background:#232833; color:var(--muted); }
+    .saved { color:#5fbf7f; }
+    #toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#0b0f14; border:1px solid var(--border); padding:8px 14px; border-radius:8px; display:none; }
+    #toast.err { border-color:#c0554e; color:#f0a9a3; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>清洗 · 图片标注</h1>
+    <a href="/">工作台</a>
+    <a href="/reader/">阅读器</a>
+    <span id="model" class="tag"></span>
+  </header>
+  <div class="wrap">
+    <label>角色名册（可选，用于让模型按名认人；逐个"名字=特征"，分号隔开）</label>
+    <textarea id="roster" class="roster" placeholder="林澈=黑色凌乱短发的冷静少年,D班; 许映白=银白长发浅金瞳清冷少女; ..."></textarea>
+    <p class="hint">MiMo 看图给出 alt + 描述 → 你确认/修改 alt → 保存写回卷 Markdown 并重解析。操作阶段直接信任这里定的图注。</p>
+    <div id="list"></div>
+  </div>
+  <div id="toast"></div>
+  <script src="cleaning.js"></script>
+</body>
+</html>
