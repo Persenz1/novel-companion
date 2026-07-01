@@ -5,9 +5,20 @@
 // 的供应商都能直接用。
 import type { ModelConfig } from "./config.js";
 
+/** 多模态内容分片：文本或图片（OpenAI 通用格式，图片走 base64 data URI 或公网 URL）。 */
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
+}
+
+/** 把本地图片字节包成 OpenAI image_url 分片（base64 data URI）。 */
+export function imagePart(bytes: Uint8Array, mime: string): ContentPart {
+  const b64 = Buffer.from(bytes).toString("base64");
+  return { type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } };
 }
 
 export interface ChatResult {
@@ -26,7 +37,7 @@ function joinUrl(base: string, suffix: string): string {
 export async function chat(
   cfg: ModelConfig,
   messages: ChatMessage[],
-  opts: { temperature?: number; jsonMode?: boolean; signal?: AbortSignal } = {},
+  opts: { temperature?: number; jsonMode?: boolean; maxCompletionTokens?: number; signal?: AbortSignal } = {},
 ): Promise<ChatResult> {
   if (!cfg.base_url || !cfg.api_key || !cfg.model)
     throw new LlmError("模型未配置：base_url / api_key / model 必填。");
@@ -37,14 +48,18 @@ export async function chat(
     temperature: opts.temperature ?? 0.2,
   };
   if (opts.jsonMode) body.response_format = { type: "json_object" };
+  // MiMo 等要求 max_completion_tokens；仅在调用方指定时下发，避免影响只认 max_tokens 的供应商。
+  if (opts.maxCompletionTokens) body.max_completion_tokens = opts.maxCompletionTokens;
 
   let resp: Response;
   try {
     resp = await fetch(joinUrl(cfg.base_url, "/chat/completions"), {
       method: "POST",
+      // 同时带 Authorization: Bearer 和 api-key：DeepSeek 认前者、MiMo 认后者，未知头会被忽略。
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${cfg.api_key}`,
+        "api-key": cfg.api_key,
       },
       body: JSON.stringify(body),
       signal: opts.signal,

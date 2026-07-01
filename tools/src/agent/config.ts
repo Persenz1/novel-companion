@@ -22,6 +22,7 @@ export interface WorkbenchConfig {
   bookpack_dir: string; // 当前打开的 bookpack 根目录
   drafter: ModelConfig; // 起草角色
   reviewer: ModelConfig; // 复核角色
+  vision: ModelConfig; // 识图角色（多模态，如 mimo-v2.5）；未配则图片仍走人工队列
 }
 
 const EMPTY_MODEL: ModelConfig = { base_url: "", api_key: "", model: "" };
@@ -31,6 +32,7 @@ export function defaultConfig(bookpackDir = ""): WorkbenchConfig {
     bookpack_dir: bookpackDir,
     drafter: { ...EMPTY_MODEL },
     reviewer: { ...EMPTY_MODEL },
+    vision: { ...EMPTY_MODEL },
   };
 }
 
@@ -42,6 +44,7 @@ export function loadConfig(): WorkbenchConfig {
       bookpack_dir: raw.bookpack_dir ?? "",
       drafter: { ...EMPTY_MODEL, ...(raw.drafter ?? {}) },
       reviewer: { ...EMPTY_MODEL, ...(raw.reviewer ?? {}) },
+      vision: { ...EMPTY_MODEL, ...(raw.vision ?? {}) },
     };
   } catch {
     return defaultConfig();
@@ -63,6 +66,7 @@ export function redactConfig(cfg: WorkbenchConfig): unknown {
     bookpack_dir: cfg.bookpack_dir,
     drafter: redactModel(cfg.drafter),
     reviewer: redactModel(cfg.reviewer),
+    vision: redactModel(cfg.vision),
   };
 }
 

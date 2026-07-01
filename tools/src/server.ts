@@ -122,6 +122,7 @@ async function handleApi(
       bookpack_dir: typeof body.bookpack_dir === "string" ? body.bookpack_dir : cfg.bookpack_dir,
       drafter: mergeModel(cfg.drafter, body.drafter as Partial<ModelConfig>),
       reviewer: mergeModel(cfg.reviewer, body.reviewer as Partial<ModelConfig>),
+      vision: mergeModel(cfg.vision, body.vision as Partial<ModelConfig>),
     };
     saveConfig(next);
     return sendJson(res, 200, { ok: true, config: redactConfig(next) });
