@@ -11,7 +11,7 @@
 - `tools/src/agent/providers.ts`
 - `tools/src/agent/llm.ts`
 
-`ModelConfig` 预留：
+`ModelConfig` 支持：
 
 ```ts
 provider?: "auto" | "openai" | "deepseek" | "mimo";

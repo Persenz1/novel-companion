@@ -21,10 +21,10 @@
 
 ## 3. 当前阶段目标
 
-当前阶段目标是跑通第一阶段制作闭环，而不是完整桌面应用：
+当前阶段目标是跑通本地制作闭环，而不是完整桌面应用：
 
 ```text
-清洗 Markdown
+EPUB / 已清洗 Markdown
 -> Parsed JSONL
 -> 硬校验
 -> AI 起草 Candidates
@@ -34,7 +34,7 @@
 -> 最低限度 Markdown 阅读器
 ```
 
-已落地的代码闭环到 Compiled 查询、数据工作台和最低限度 Markdown 阅读器。
+已落地的代码闭环到 EPUB 导入 MVP、Compiled 查询、数据工作台和最低限度 Markdown 阅读器。桌面 App、真实书籍规模压测、多卷清洗和成本优化仍是后续工作。
 
 ## 4. 硬约束
 
@@ -58,13 +58,17 @@
 
 当前实现的上下文策略是：目标章节 + 所属整卷正文 + 全局 Accepted 结构化记忆（提示词当前主要渲染已确认实体名册，其他 Accepted 类型由数据层读入但尚未完整压缩注入）。DeepSeek Phase A 四卷长程压力已证明：在 gray-tower 样例上，不回喂前卷原文、也不加前卷梗概，仍可保持核心实体复用、主要伏笔回收和 D 班点数弧线连续。
 
+异常队列已支持单项裁决和批量裁决 / 批量转 OpenQuestion；裁决后可通过工作台触发 validate + compile，让阅读器右栏刷新到新的 Accepted 状态。
+
 ## 6. 未完成核心需求
 
-- review item 批量裁决 / 批量转 OpenQuestion，让高风险关系变化、隐藏身份和伏笔判断能半自动收口。
 - 真实（版权）书籍长程制作与长程阅读压测。
+- 多卷 EPUB 解包、清洗和导入；当前 EPUB importer MVP 先按 `v01` 写入。
 - 第二卷及后续卷的前文上下文压缩 / 检索——Phase A 暂不阻塞 gray-tower 四卷主线；Phase B 可作为真实书或质量 / 成本对照增强，测试执行手册见 `modules/long-range-test.md`。
+- DeepSeek cache 命中率与整本书制作成本优化。
+- 批量合并同名实体 / 同义实体的专用入口。
 - `AgentStore` 对 update / merge / deprecate 的完整 before 快照和恢复语义。
-- LLM 输出的 schema-level 修复、重试和脱敏验收记录。
-- **清洗真正起点：整本 EPUB → 多模态清洗**（先写 EPUB 解包 / 解析器，MiMo 不能直接吃 EPUB）。当前起点是已切好 block 的包，体验不完整。以此为准，覆盖旧的「外部 Codex/GPT 清洗」设想。详见 `modules/backlog-cleaning-and-enhancement.md` §1。
+- LLM 输出的通用 schema-level 修复、重试和脱敏验收记录。
+- **清洗真正起点：整本 EPUB → 多模态清洗**已经有受控 fixture 和一键 MVP，但真实书籍、多卷结构、AI 建议写回和人工确认队列还没完成。以此为准，覆盖旧的「外部 Codex/GPT 清洗」设想。详见 `modules/cleaning-pipeline.md`。
 - **已确认 block 右栏看不到增强信息**：先不当 bug 修，需先与用户对齐「右栏显示什么」。同上 §2。
 - **AI 提取型增强交互**（人物信息卡 / 角色事件时间线 / 关系等，从已洗数据提取）：不急，系统跑通后做，但**显示接口现在就预留**。同上 §3。

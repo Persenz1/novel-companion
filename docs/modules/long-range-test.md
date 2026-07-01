@@ -40,13 +40,15 @@ npm install                 # Node >= 20
 ```json
 {
   "bookpack_dir": "<绝对路径>/samples/gray-tower",
-  "drafter":  { "base_url": "https://api.deepseek.com/v1", "api_key": "<KEY>", "model": "deepseek-chat" },
-  "reviewer": { "base_url": "https://api.deepseek.com/v1", "api_key": "<KEY>", "model": "deepseek-reasoner" }
+  "drafter":  { "provider": "deepseek", "base_url": "https://api.deepseek.com", "api_key": "<KEY>", "model": "deepseek-v4-flash" },
+  "reviewer": { "provider": "deepseek", "base_url": "https://api.deepseek.com", "api_key": "<KEY>", "model": "deepseek-v4-pro" },
+  "vision":   { "provider": "mimo", "base_url": "<MiMo base_url>", "api_key": "<KEY>", "model": "mimo-v2.5" }
 }
 ```
 
-- 采用 OpenAI 通用协议（`/chat/completions`），DeepSeek 直接可用。
-- 起草与复核**必须用不同模型**（双 AI 制衡）。这里 drafter=`deepseek-chat`、reviewer=`deepseek-reasoner`。
+- 采用 OpenAI-compatible `/chat/completions`，供应商差异由 `tools/src/agent/providers.ts` 处理。
+- 起草与复核**必须用不同模型**（双 AI 制衡）。复跑建议用 `deepseek-v4-flash` / `deepseek-v4-pro`。
+- 2026-07-01 的历史 Phase A 结果使用旧模型名；结果仍可参考，但新测试不应继续照抄旧配置。
 - 本机可能已有一份配了 key 的该文件；若没有或换 key，按上面形状填。**key 只留本地，别写进任何提交文件（包括本文档）。**
 
 ## 4. 语料里埋的跨卷线索（测试靶点）
@@ -97,7 +99,7 @@ rm -rf "$WORK" && cp -r samples/gray-tower "$WORK"
 
 ### Phase B：增强档对比（要写代码）
 
-目标：在 Phase A 之上加前文信息，看指标能提升多少、成本涨多少。Phase A 结果显示 gray-tower 主线暂不急需 Phase B；下一步更优先的是 review item 批量裁决 / 批量转 OpenQuestion。等需要真实书籍或质量 / 成本对照时，再做成**可插拔的上下文档位**，三档扫一遍：
+目标：在 Phase A 之上加前文信息，看指标能提升多少、成本涨多少。Phase A 结果显示 gray-tower 主线暂不急需 Phase B；批量裁决入口已补齐。等需要真实书籍或质量 / 成本对照时，再做成**可插拔的上下文档位**，三档扫一遍：
 
 - **L0＝Phase A**：现状（全局 accepted）。
 - **L1**：L0 ＋ **前卷梗概**。新增：一个「梗概生成」步骤（对 vol1 逐卷/逐章用起草模型生成 recap，本身走复核落盘存成 artifact，例如 `reports/synopsis.jsonl`），起草 vol2 时把 vol1 梗概拼进 user prompt。
@@ -128,9 +130,9 @@ Phase B 属于**新功能**，可以改 `agent/*` 和 prompts；但不要动 par
 
 早期作者只跑了 vol1 的 `prologue` 和 `c01`（然后回滚了数据），观察到：
 
-- 起草（deepseek-chat）产出结构规整：实体用**语义稳定 ID**（`entity_linche`、`entity_xuyingbai`），类型 / `first_seen` 正确。
+- 起草（历史实跑为 `deepseek-chat`）产出结构规整：实体用**语义稳定 ID**（`entity_linche`、`entity_xuyingbai`），类型 / `first_seen` 正确。
 - **章内去重成立**：c01 只为新人物（周弥、白川遥）建实体，事实 / 说话人**复用**了 accepted 里的 `entity_linche` / `entity_xuyingbai`，没有重造。
-- 复核（deepseek-reasoner）把干净低风险项全部 auto 落盘，0 升级。
+- 复核（历史实跑为 `deepseek-reasoner`）把干净低风险项全部 auto 落盘，0 升级。
 - 一个**待观察的风险**：c01 重新抽了一次「班级点数制度」，但用了**相同 ID**，AgentStore 按 id upsert，所以没产生重复。**但复核并没有展示出「同名不同 ID → 合并」的甄别**——如果起草对同一概念换了 ID，当前流程不一定拦得住。跨卷时这个风险更大，指标 §6.1 要重点盯。
 - 防剧透闭环 OK：validate+compile 后阅读器右栏按 `read_boundary` 出实体，越界隐藏未读实体。
 

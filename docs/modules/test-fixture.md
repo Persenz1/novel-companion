@@ -11,7 +11,7 @@
 提交态保持为清洗后样例包：
 
 - 4 卷正文和 Parsed 存在（`parsed/volumes/v0{1..4}.md`）。
-- 图片占位存在（仅卷 1）。
+- v01 有 5 张真实测试插图（林澈立绘、银发少女读信、灰塔夜景、点数榜、五人群像），供清洗识图和阅读器测试。
 - 中日双语日文源存在：每卷 `source/ja/{vol}.blocks.json`（`block_id -> 日文`，1:1，供阅读器逐段交替显示）。旧的 alignment 级 `source/ja/v01.json` 保留，供 parser 生成 alignments。
 - Accepted / Candidates / Review / work_runs 为空。
 - Compiled 是空 Accepted 基线。

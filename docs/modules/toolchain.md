@@ -13,6 +13,7 @@ npx tsx src/cli.ts parse <bookpack-dir> [volume_id]
 npx tsx src/cli.ts validate <bookpack-dir>
 npx tsx src/cli.ts compile <bookpack-dir>
 npx tsx src/cli.ts query <bookpack-dir> <current_block> <read_boundary> [--ja]
+npx tsx src/cli.ts describe-image <image-path> [prompt]
 npx tsx src/cli.ts export-epub <bookpack-dir> <out.epub> [volume_id]
 npx tsx src/cli.ts import-epub <epub-path> <bookpack-dir> [--volume-id v01] [--series-id id] [--pack-id id] [--pack-name name] [--force] [--no-validate]
 npx tsx src/cli.ts prepare-mimo <bookpack-dir> [volume_id]
@@ -143,6 +144,22 @@ npx tsx src/cli.ts run-mimo-cleaning /tmp/gray-tower-imported \
 
 该命令会读取 `tools/.workbench-config.json` 中的 `vision` 配置；不会打印 API key。
 
+## Vision Describe
+
+实现：`tools/src/cli.ts` + `tools/src/agent/llm.ts`
+
+职责：
+
+- 读取本地图片。
+- 使用配置中的 `vision` 模型做一次图文调用。
+- 用于验证 MiMo / 其他多模态供应商配置是否可用。
+
+常用命令：
+
+```bash
+npx tsx src/cli.ts describe-image ../samples/gray-tower/assets/images/v01_img_001.png
+```
+
 ## 测试与验证
 
 常用命令：
@@ -161,4 +178,4 @@ npx tsx src/cli.ts compile ../samples/gray-tower
 
 - 编译产物过期检测只预留 `source_fingerprint`。
 - validator 的 schema 校验还不是完整 JSON Schema。
-- validate / compile 尚未由工作台自动串联触发。
+- draft / review 后不会自动 validate / compile；工作台已有 `POST /api/compile`，可在阶段收口时一键 validate + compile。

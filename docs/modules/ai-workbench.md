@@ -20,7 +20,7 @@
 
 服务器：`tools/src/server.ts`（`npm run workbench`）。**已与阅读器合并**：同一服务器同时提供工作台（`/`）和阅读器（`/reader/`），共用同一份 `.workbench-config.json`（bookpack 路径 ＋ API key），顶栏互相跳转。读侧视图逻辑在 `tools/src/readerView.ts`，工作台与独立阅读器（`tools/src/reader.ts`）共用。
 
-已用 DeepSeek 实跑验证（drafter=`deepseek-chat`、reviewer=`deepseek-reasoner`）：起草产出语义稳定实体 ID，章内 / 跨卷复用已确认实体不重造，复核干净项 auto 落盘；四卷长程实测结果见 [long-range-test-phase-a-2026-07-01](long-range-test-phase-a-2026-07-01.md)。
+已用 DeepSeek 实跑验证：起草产出语义稳定实体 ID，章内 / 跨卷复用已确认实体不重造，复核干净项 auto 落盘；四卷长程实测结果见 [long-range-test-phase-a-2026-07-01](long-range-test-phase-a-2026-07-01.md)。历史实跑使用旧模型名，复跑配置以 [provider-adapters](provider-adapters.md) 为准。
 
 前端：`tools/web/*`（工作台）、`tools/web/reader/*`（阅读器）
 
@@ -44,8 +44,12 @@ Agent 模块：
 - `/api/review`
 - `/api/queue`
 - `/api/queue/resolve`
+- `/api/queue/resolve-batch`
+- `/api/compile`
 - `/api/changes`
 - `/api/revert`
+- `/api/book`
+- `/api/context`
 
 ## 当前上下文策略
 
@@ -59,7 +63,7 @@ Agent 模块：
 
 ## 配置与安全
 
-模型配置存在 `tools/.workbench-config.json`，已 gitignore。前端状态接口只返回 `api_key_set`，不返回 key 明文。
+模型配置存在 `tools/.workbench-config.json`，已 gitignore。每个角色为 `{ provider, base_url, api_key, model }`，`provider` 可自动推断。前端状态接口只返回 `api_key_set`，不返回 key 明文。
 
 仓库测试不调用真实模型；真实 LLM 试跑只能提交脱敏结果和代码修正。
 
@@ -86,11 +90,11 @@ Agent 模块：
 
 ## 未完成
 
-- review item 批量裁决 / 批量转 OpenQuestion。
 - 真实书籍长程制作压测。
 - Phase B 前文上下文压缩 / 检索（gray-tower Phase A 暂不阻塞）。
 - 任意 scene / block range / 整卷作业。
 - token 预算器。
 - LLM JSON schema 修复与重试。
 - 复核 decision log 或 `review_runs`。
-- 自动 validate / compile。
+- draft / review 后不自动 validate / compile；工作台已有 `POST /api/compile` 和按钮，但仍由用户在阶段收口时触发。
+- 批量合并同名实体 / 同义实体。

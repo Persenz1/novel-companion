@@ -9,6 +9,7 @@
 - Validator：校验 manifest、Markdown、Parsed、Accepted、Candidates、Review、Compiled。
 - Compiler：生成 `compiled/reader_index.json`，且要求 validation report 为 `passed`。
 - Query：`getVisibleContext(current_block, read_boundary, options)` 按 `read_boundary` 防剧透过滤。
+- EPUB 清洗基础：`export-epub` / `import-epub` / `prepare-mimo` 已用受控 gray-tower fixture 验证，可导入、parse、validate 并生成章节任务包；真实模型调用不进入仓库自动测试。
 - gray-tower fixture：在临时目录生成 Candidates / Review / Accepted / work_runs，不调用模型。
 - 自动测试：19 个 node:test 用例覆盖 marker 解析和 query 防剧透行为。
 
@@ -21,13 +22,13 @@
 - 异常队列：复核升级项写 `review/review_items.jsonl`。单项裁决 `POST /api/queue/resolve`；**批量裁决** `POST /api/queue/resolve-batch`（接受 / 拒绝 / 批量转 open_question，`resolveExceptionsBatch` 一次读写、open_question 顺序 ID 批内累进）。工作台队列面板支持勾选 / 全选 / 按类型选（如 relation_change）+ 批量操作。
 - 落盘后收口：`POST /api/compile`（先 validate 再 compile），队列面板「重新编译」按钮一键刷新阅读器右栏。
 - 多模态识图：config 加 `vision` 角色（OpenAI 兼容，如 MiMo `mimo-v2.5`）；`llm.chat` 支持图文混合内容 + `imagePart()` + 双鉴权头（Bearer/api-key）；`nc describe-image <path>` CLI 可对任意图跑识别。
-- 清洗·图片标注（Phase 1）：`/cleaning/` 页 + `src/cleaning/imageAnnotate.ts`。vision 模型看图给出 alt + 描述（可按角色名册认人），人工确认后 `POST /api/cleaning/set-alt` 写回卷 Markdown 的 asset 标记并重解析。图片身份在**清洗阶段**定死，操作阶段（纯文本 DeepSeek）直接信任，不把多模态接进 agent。已用真实插图验证（单人/五人群像按名册认人正确）。**清洗→起草→复核→批量裁决→compile→阅读 一条龙已端到端跑通**（工作副本上：MiMo 标注图片→写回 Markdown→reparse→起草复核→compile→阅读器右栏显示确认后的图注）。
+- 清洗工作台：`/cleaning/` 页 + `tools/src/cleaning/*`。当前主入口是“填 EPUB 路径 -> 开始自动清洗”：系统自动导入到 `/tmp/novel-companion-cleaning/{epub-stem}`、parse + validate、生成 MiMo 章节任务、逐章调用 MiMo 并展示进度和建议。图片 alt 标注仍保留，人工确认后 `POST /api/cleaning/set-alt` 写回卷 Markdown 的 asset 标记并重解析。图片身份在**清洗阶段**定死，操作阶段（纯文本 DeepSeek）直接信任，不把多模态接进 agent。已用真实插图验证（单人/五人群像按名册认人正确）。**清洗→起草→复核→批量裁决→compile→阅读 一条龙已端到端跑通**（工作副本上：MiMo 标注图片→写回 Markdown→reparse→起草复核→compile→阅读器右栏显示确认后的图注）。
 - 配置形态（对齐 DeepSeek 官方文档）：base_url 用 `https://api.deepseek.com`，起草 `deepseek-v4-flash`、复核 `deepseek-v4-pro`（旧 `deepseek-chat` / `deepseek-reasoner` 将于 2026/07/24 弃用）；设置面板新增「识图模型」栏，MiMo 可在界面直接配置，无需手改 `.workbench-config.json`。`llm.chat` 区分 `max_tokens`（DeepSeek 等）与 `max_completion_tokens`（MiMo 等推理模型）两套上限，起草调用固定 `max_tokens=8192` 防多候选 JSON 被 4096 默认值截断。工作副本建议放在 `/tmp` 之外的持久目录（如 `~/nc-workpack/gray-tower`），避免重启清空 `/tmp` 后数据包丢失。
 - 回滚入口：单 Change / 整批 work_run。
 - Markdown 阅读器：`tools/src/reader.ts` + `tools/web/reader/`。阅读标尺推算 `current_block`，连续阅读推进 `read_boundary`，跳读 / 目录跳转 / 大幅拖动不推进，也可鼠标点选 block；右侧面板按 `read_boundary` 调 `getVisibleContext`，越界时提示预览。目录为推开式独立栏，不遮挡正文。
 - 中日双语显示（真正双语，非参考对照）：逐段交替（中文段 + 其日文段），可切 中日双语 / 仅中文 / 仅日文。日文按 block 1:1 存于 `source/ja/{vol}.blocks.json`，阅读器侧读入合并；中文仍是唯一时间线主轴、防剧透基准；核心 parser/validator/compiler/schema 不受影响。读侧逻辑抽到 `tools/src/readerView.ts`。
 - 界面合并：`npm run workbench` 同一服务器同时提供工作台（`/`）和阅读器（`/reader/`），共用同一份配置，顶栏互相跳转。
-- DeepSeek 长程 Phase A 实跑：drafter=`deepseek-chat`、reviewer=`deepseek-reasoner`，已按 `modules/long-range-test.md` 在 `/tmp/gt-longrange-4vol-final2` 跑通 gray-tower `v01`-`v04`。每卷结束均 validate + compile 通过；实体复用、许映白身份伏笔回收、未寄出的名单长线、D 班点数弧线均成立。脱敏结果见 `modules/long-range-test-phase-a-2026-07-01.md`。
+- DeepSeek 长程 Phase A 实跑：历史工作副本 `/tmp/gt-longrange-4vol-final2` 已跑通 gray-tower `v01`-`v04`。当时使用的是旧模型名，复跑应按 `provider-adapters.md` 使用当前 `deepseek-v4-flash` / `deepseek-v4-pro`。每卷结束均 validate + compile 通过；实体复用、许映白身份伏笔回收、未寄出的名单长线、D 班点数弧线均成立。脱敏结果见 `modules/long-range-test-phase-a-2026-07-01.md`。
 
 真实 LLM 长程验证依赖本机 API key，没有进入仓库可复现测试；仓库自动测试仍不调用模型。
 
@@ -52,4 +53,6 @@
 - `work_runs.context_estimate` 只记录 block 数；真实模型调用已记录 `token_usage`，但尚未做 token 预算器。
 - 同模型起草 / 复核目前只有文档要求，没有代码硬拒绝。
 - `AgentStore` 已避免实体 first_seen 被后卷覆盖、避免非实体同 ID 内容静默覆盖；但 Change `before` 仍不足以恢复完整 update / merge / deprecate。
+- 清洗 MiMo 建议当前写入报告并在界面展示，尚未做通用的“采纳建议 -> 改 Markdown/manifest/assets -> reparse/validate”应用器；图片 alt 是已实现的窄路径。
+- EPUB importer 当前按单卷 `v01` 写入；真实多卷 EPUB 和复杂目录 / 脚注 / 跨文件章节合并仍未验证。
 - 阅读器防剧透已在 4 卷、填满 accepted 的工作副本上做过长程压测（gray-tower `v01`–`v04`，239 个时间线位置全扫）：0 越界泄漏、0 非单调回退，reveal 曲线单调（实体 14→23→31→36、relation_change 1→4→7→10），spoiler-bound 关系卡在其 `visible_from` 前一块隐藏、到位后出现。**真实书籍**级别的长程阅读压测仍未做；提交态样例包 accepted 为空，右栏走空态，需跑 agent 或 fixture 填数据后才见实体 / 卡片。
