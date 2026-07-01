@@ -15,7 +15,7 @@ const CONFIG_PATH = path.resolve(here, "..", "..", ".workbench-config.json");
 export interface ModelConfig {
   base_url: string; // 例如 https://api.deepseek.com
   api_key: string;
-  model: string; // 例如 deepseek-chat / deepseek-reasoner / mimo-v2.5
+  model: string; // 例如 deepseek-v4-flash / deepseek-v4-pro / mimo-v2.5
 }
 
 export interface WorkbenchConfig {
