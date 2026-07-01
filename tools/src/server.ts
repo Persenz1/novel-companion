@@ -17,9 +17,12 @@ import {
 } from "./agent/config.js";
 import { WorkbenchData } from "./agent/workbenchData.js";
 import { AgentStore } from "./agent/agentStore.js";
-import { runDraft, runReview, resolveException } from "./agent/pipeline.js";
+import { runDraft, runReview, resolveException, resolveExceptionsBatch } from "./agent/pipeline.js";
+import type { ResolveDecision } from "./agent/pipeline.js";
 import { buildReaderBook } from "./readerView.js";
 import { CompiledQuery } from "./query.js";
+import { Validator } from "./validator.js";
+import { Compiler, CompileError } from "./compiler.js";
 
 type Rec = Record<string, unknown>;
 
@@ -233,6 +236,41 @@ async function handleApi(
       { editedDraft: body.edited_draft as Rec, note: body.note as string },
     );
     return sendJson(res, 200, result);
+  }
+
+  if (pathname === "/api/queue/resolve-batch" && method === "POST") {
+    const body = await readBody(req);
+    const decisions = (body.decisions as ResolveDecision[] | undefined) ?? [];
+    if (!Array.isArray(decisions) || decisions.length === 0)
+      return sendJson(res, 400, { error: "decisions 为空。" });
+    const results = resolveExceptionsBatch(openBookpack(cfg), decisions);
+    const accepted = results.filter((r) => r.decision === "accept").length;
+    const rejected = results.filter((r) => r.decision === "reject").length;
+    const openQuestions = results.filter((r) => r.decision === "open_question").length;
+    return sendJson(res, 200, { results, accepted, rejected, open_questions: openQuestions });
+  }
+
+  if (pathname === "/api/compile" && method === "POST") {
+    const store = openBookpack(cfg);
+    const report = new Validator(store).validateBookpack();
+    if (report.status === "failed")
+      return sendJson(res, 409, {
+        error: `validation status=${report.status}，无法 compile。`,
+        errors: report.errors,
+      });
+    try {
+      const idx = new Compiler(store).compileReaderIndex();
+      const acceptedTotal = Object.values(idx.accepted).reduce((n, m) => n + Object.keys(m).length, 0);
+      return sendJson(res, 200, {
+        status: report.status,
+        warnings: report.warnings.length,
+        accepted: acceptedTotal,
+        blocks: Object.keys(idx.blocks).length,
+      });
+    } catch (err) {
+      if (err instanceof CompileError) return sendJson(res, 409, { error: err.message });
+      throw err;
+    }
   }
 
   if (pathname === "/api/changes" && method === "GET") {

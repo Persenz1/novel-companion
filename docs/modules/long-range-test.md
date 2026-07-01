@@ -118,7 +118,7 @@ Phase B 属于**新功能**，可以改 `agent/*` 和 prompts；但不要动 par
 
 1. **实体去重率**：vol2 处理后，`accepted/entities.jsonl` 里 vol1 的 6 个核心实体（林澈/灰塔学院/班级点数制度/许映白/周弥/白川遥）应各只有 1 条，ID 不变；vol2 只新增 `秦昭`、`影子分组` 等新实体。判定：**同名实体是否出现多个不同 ID**（这是最关键的失败模式）。
 2. **数值连续**：找 D 班点数的 `metric` / `metric_change`。vol1 应留下 150；vol2 应产出承接 150→190 的变化；vol3 / vol4 应继续到 160→130→200，而不是从 0/100 重新开始。
-3. **关系追踪**：应出现或升级林澈–许映白关系变化（陌生→谨慎合作→裂痕→结盟）。Phase A 中 `relation_change` 因高风险路由保持在 review item，流程安全但需要批量裁决补收口。
+3. **关系追踪**：应出现或升级林澈–许映白关系变化（陌生→谨慎合作→裂痕→结盟）。Phase A 中 `relation_change` 因高风险路由保持在 review item；**批量裁决入口已补齐**（队列面板批量操作 / `POST /api/queue/resolve-batch`），批量接受后 `accepted/relation_changes.jsonl` 落盘、`POST /api/compile` 后进入阅读器右栏，已在 phase-a 数据集验证闭环。
 4. **伏笔升级**：许映白在 vol2「掌握非公开数据 / 不是真正学生」，理想情况复核把它升级成 `review/review_items.jsonl` 里的 open 项或 open_question，而不是静默 auto 落盘。
 5. **成本**：累计模型调用次数与 token（`chat()` 返回的 `usage`；可在 pipeline 打点）。L0/L1/L2 各记一份，做质量–成本曲线。
 
@@ -134,7 +134,7 @@ Phase B 属于**新功能**，可以改 `agent/*` 和 prompts；但不要动 par
 - 一个**待观察的风险**：c01 重新抽了一次「班级点数制度」，但用了**相同 ID**，AgentStore 按 id upsert，所以没产生重复。**但复核并没有展示出「同名不同 ID → 合并」的甄别**——如果起草对同一概念换了 ID，当前流程不一定拦得住。跨卷时这个风险更大，指标 §6.1 要重点盯。
 - 防剧透闭环 OK：validate+compile 后阅读器右栏按 `read_boundary` 出实体，越界隐藏未读实体。
 
-最终 Phase A 四卷实跑已验证：实体去重成立，数值主弧线成立，伏笔能在卷 3 回收；关系变化主要被安全升级到 review item。后续重点不是证明 L0 能不能跑，而是补 review item 的批量裁决入口。
+最终 Phase A 四卷实跑已验证：实体去重成立，数值主弧线成立，伏笔能在卷 3 回收；关系变化主要被安全升级到 review item。原先的「补 review item 批量裁决入口」已完成并验证闭环（批量接受 relation_change → 落盘 → compile → 阅读器右栏）。后续候选：批量合并同名实体、阅读器真实书籍压测、Phase B 三档扫。
 
 ## 8. 注意事项
 

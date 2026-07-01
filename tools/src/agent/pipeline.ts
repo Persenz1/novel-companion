@@ -456,56 +456,67 @@ export interface ResolveResult {
   change_id?: string;
 }
 
-export function resolveException(
-  store: FileStore,
-  reviewItemId: string,
-  decision: "accept" | "reject" | "open_question",
-  opts: { editedDraft?: Rec; note?: string } = {},
-): ResolveResult {
+export interface ResolveDecision {
+  id: string;
+  decision: "accept" | "reject" | "open_question";
+  editedDraft?: Rec;
+  note?: string;
+}
+
+/**
+ * 批量裁决异常队列：一次读入 review_items / candidates / open_questions，
+ * 顺序应用每条决定，最后各文件只写一次。`accept` 走 AgentStore.write（各自落盘），
+ * `open_question` 的顺序 ID 在批内累进，避免多条同章撞号。任一项报错则整批抛出（不半写队列文件）。
+ */
+export function resolveExceptionsBatch(store: FileStore, decisions: ResolveDecision[]): ResolveResult[] {
   const manifest = manifestOf(store);
   const reviewItems = store.readJsonl<Rec>(REVIEW_ITEMS).rows;
-  const item = reviewItems.find((r) => (r as { id?: string }).id === reviewItemId);
-  if (!item) throw new Error(`找不到异常项：${reviewItemId}`);
-
   const candidates = store.readJsonl<Candidate>(CANDIDATES).rows;
-  const candId = String((item as { candidate_id?: string }).candidate_id ?? "");
-  const candidate = candidates.find((c) => c.id === candId);
+  const existingOqs = store.readJsonl<Rec>(OPEN_QUESTIONS).rows;
+  const agentStore = new AgentStore(store, manifest.series.id);
 
-  let changeId: string | undefined;
+  const newOqs: Rec[] = [];
+  const results: ResolveResult[] = [];
 
-  if (decision === "accept") {
-    if (!candidate) throw new Error(`异常项 ${reviewItemId} 关联的候选不存在。`);
-    const edited = opts.editedDraft;
-    const draft = (edited && Object.keys(edited).length ? edited : candidate.payload.draft) as Rec;
-    if (!draft || !draft.id) throw new Error("草案缺少 id，无法接受。");
-    const agentStore = new AgentStore(store, manifest.series.id);
-    const r = agentStore.write(candidate.type, draft, {
-      operation: edited && Object.keys(edited).length ? "accept_candidate_with_edit" : "accept_candidate",
-      decidedBy: "user",
-      autoAccepted: false,
-      approvedBy: "user",
-      reason: opts.note ?? "人工裁决接受。",
-      candidateId: candidate.id,
-    });
-    changeId = r.changeId;
-    candidate.status = edited && Object.keys(edited).length ? "accepted_with_edit" : "accepted";
-    (item as Rec).status = "resolved";
-  } else if (decision === "reject") {
-    if (candidate) candidate.status = "rejected";
-    (item as Rec).status = "dismissed";
-  } else {
-    // 转未决问题
-    const oqs = store.readJsonl<Rec>(OPEN_QUESTIONS).rows;
-    const mkOq = nextSeqId(oqs, `oq_${chapterKey(String((item as { chapter_id?: string }).chapter_id ?? "v01"))}_`);
-    appendJsonl(store, OPEN_QUESTIONS, [
-      {
+  for (const { id: reviewItemId, decision, editedDraft, note } of decisions) {
+    const item = reviewItems.find((r) => (r as { id?: string }).id === reviewItemId);
+    if (!item) throw new Error(`找不到异常项：${reviewItemId}`);
+    const candId = String((item as { candidate_id?: string }).candidate_id ?? "");
+    const candidate = candidates.find((c) => c.id === candId);
+
+    let changeId: string | undefined;
+
+    if (decision === "accept") {
+      if (!candidate) throw new Error(`异常项 ${reviewItemId} 关联的候选不存在。`);
+      const edited = editedDraft;
+      const draft = (edited && Object.keys(edited).length ? edited : candidate.payload.draft) as Rec;
+      if (!draft || !draft.id) throw new Error("草案缺少 id，无法接受。");
+      const r = agentStore.write(candidate.type, draft, {
+        operation: edited && Object.keys(edited).length ? "accept_candidate_with_edit" : "accept_candidate",
+        decidedBy: "user",
+        autoAccepted: false,
+        approvedBy: "user",
+        reason: note ?? "人工裁决接受。",
+        candidateId: candidate.id,
+      });
+      changeId = r.changeId;
+      candidate.status = edited && Object.keys(edited).length ? "accepted_with_edit" : "accepted";
+      (item as Rec).status = "resolved";
+    } else if (decision === "reject") {
+      if (candidate) candidate.status = "rejected";
+      (item as Rec).status = "dismissed";
+    } else {
+      // 转未决问题；ID 基于已落盘 + 本批已生成的同前缀项累进。
+      const prefix = `oq_${chapterKey(String((item as { chapter_id?: string }).chapter_id ?? "v01"))}_`;
+      const mkOq = nextSeqId([...existingOqs, ...newOqs], prefix);
+      newOqs.push({
         id: mkOq(1),
         series_id: manifest.series.id,
         type: "from_escalation",
         status: "open",
         risk_level: "medium",
         source_span: (item as { source_span?: Rec }).source_span,
-        question: opts.note ?? String((item as { message?: string }).message ?? "待确认问题"),
+        question: note ?? String((item as { message?: string }).message ?? "待确认问题"),
         related_candidate_ids: candId ? [candId] : [],
         related_accepted_ids: [],
         resolution: null,
@@ -513,13 +524,28 @@ export function resolveException(
         created_by: "user",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      },
-    ]);
-    if (candidate) candidate.status = "converted_to_open_question";
-    (item as Rec).status = "converted_to_open_question";
+      });
+      if (candidate) candidate.status = "converted_to_open_question";
+      (item as Rec).status = "converted_to_open_question";
+    }
+
+    results.push({ review_item_id: reviewItemId, decision, change_id: changeId });
   }
 
+  if (newOqs.length) appendJsonl(store, OPEN_QUESTIONS, newOqs);
   store.writeJsonl(CANDIDATES, candidates as unknown as Rec[]);
   store.writeJsonl(REVIEW_ITEMS, reviewItems);
-  return { review_item_id: reviewItemId, decision, change_id: changeId };
+  return results;
+}
+
+export function resolveException(
+  store: FileStore,
+  reviewItemId: string,
+  decision: "accept" | "reject" | "open_question",
+  opts: { editedDraft?: Rec; note?: string } = {},
+): ResolveResult {
+  const [result] = resolveExceptionsBatch(store, [
+    { id: reviewItemId, decision, editedDraft: opts.editedDraft, note: opts.note },
+  ]);
+  return result!;
 }

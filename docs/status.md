@@ -18,7 +18,8 @@
 - 起草 / 复核流水线：`tools/src/agent/pipeline.ts`。
 - 本地模型配置：`tools/.workbench-config.json`，已 gitignore。
 - 自动写入：`AgentStore.write()` 写 Accepted + Change。
-- 异常队列：复核升级项写 `review/review_items.jsonl`。
+- 异常队列：复核升级项写 `review/review_items.jsonl`。单项裁决 `POST /api/queue/resolve`；**批量裁决** `POST /api/queue/resolve-batch`（接受 / 拒绝 / 批量转 open_question，`resolveExceptionsBatch` 一次读写、open_question 顺序 ID 批内累进）。工作台队列面板支持勾选 / 全选 / 按类型选（如 relation_change）+ 批量操作。
+- 落盘后收口：`POST /api/compile`（先 validate 再 compile），队列面板「重新编译」按钮一键刷新阅读器右栏。
 - 回滚入口：单 Change / 整批 work_run。
 - Markdown 阅读器：`tools/src/reader.ts` + `tools/web/reader/`。阅读标尺推算 `current_block`，连续阅读推进 `read_boundary`，跳读 / 目录跳转 / 大幅拖动不推进，也可鼠标点选 block；右侧面板按 `read_boundary` 调 `getVisibleContext`，越界时提示预览。目录为推开式独立栏，不遮挡正文。
 - 中日双语显示（真正双语，非参考对照）：逐段交替（中文段 + 其日文段），可切 中日双语 / 仅中文 / 仅日文。日文按 block 1:1 存于 `source/ja/{vol}.blocks.json`，阅读器侧读入合并；中文仍是唯一时间线主轴、防剧透基准；核心 parser/validator/compiler/schema 不受影响。读侧逻辑抽到 `tools/src/readerView.ts`。
@@ -41,11 +42,10 @@
 
 ## 主要技术债
 
-- 长程 Phase A 已证明「全局 accepted + 当前卷正文」足以支撑 gray-tower 4 卷主线；暂不急着做卷/章级梗概、token 预算器、可选 RAG。下一步优先补 review item 批量裁决 / 批量转 open_question。
-- 复核能识别部分重复实体并升级，但还没有批量合并/裁决入口。
+- 长程 Phase A 已证明「全局 accepted + 当前卷正文」足以支撑 gray-tower 4 卷主线；暂不急着做卷/章级梗概、token 预算器、可选 RAG。
+- 复核仍只识别部分重复实体并升级；批量**裁决**已有入口（见下），但批量**合并**同名实体尚无专用入口。
 - 工作台作业粒度当前是章节，不是任意 scene / block range / 整卷。
 - `work_runs.context_estimate` 只记录 block 数；真实模型调用已记录 `token_usage`，但尚未做 token 预算器。
 - 同模型起草 / 复核目前只有文档要求，没有代码硬拒绝。
 - `AgentStore` 已避免实体 first_seen 被后卷覆盖、避免非实体同 ID 内容静默覆盖；但 Change `before` 仍不足以恢复完整 update / merge / deprecate。
-- 工作台自动落盘后不会自动 validate / compile（跑完 agent 要手动 validate + compile，阅读器右栏才更新）。
 - 阅读器未做真实书籍长程阅读压测；提交态样例包 accepted 为空，右栏走空态，需跑 agent 或 fixture 填数据后才见实体 / 卡片。

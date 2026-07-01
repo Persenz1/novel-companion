@@ -293,21 +293,72 @@ function showBanner(text, active = false) {
 
 // ---------- 右栏：异常队列 ----------
 
+const queueSelection = new Set();
+
 async function loadQueue() {
   const body = $("#tab-queue");
   body.replaceChildren();
   body.appendChild(el("div", "empty", "加载中…"));
   try {
     const { items } = await api("/api/queue");
+    queueSelection.clear();
     body.replaceChildren();
-    if (items.length === 0) {
-      body.appendChild(el("div", "empty", "没有待裁决的异常项"));
-      return;
-    }
-    body.appendChild(el("p", "hint", `${items.length} 项待人工裁决`));
+
+    // 工具条：批量裁决 + 重新编译（compile 落盘后阅读器右栏才刷新）。
+    const bar = el("div", "queue-bar");
+    const summary = el("span", "hint", items.length ? `${items.length} 项待人工裁决` : "没有待裁决的异常项");
+    bar.appendChild(summary);
+    const batchActs = el("div", "queue-batch");
+    const selCount = el("span", "sel-count", "已选 0");
+    const relTypes = new Set(items.filter((i) => i.candidate_type === "relation_change").map((i) => i.id));
+    const refreshSel = () => {
+      selCount.textContent = `已选 ${queueSelection.size}`;
+      for (const b of batchActs.querySelectorAll("button[data-batch]")) b.disabled = queueSelection.size === 0;
+      body.querySelectorAll("input.queue-check").forEach((cb) => (cb.checked = queueSelection.has(cb.value)));
+    };
+    const selectAll = mkBtn("全选", "tiny ghost", () => {
+      items.forEach((i) => queueSelection.add(i.id));
+      refreshSel();
+    });
+    const clearAll = mkBtn("全不选", "tiny ghost", () => {
+      queueSelection.clear();
+      refreshSel();
+    });
+    const selRel = mkBtn(`选关系变化(${relTypes.size})`, "tiny ghost", () => {
+      relTypes.forEach((id) => queueSelection.add(id));
+      refreshSel();
+    });
+    const mkBatch = (text, cls, decision) => {
+      const b = mkBtn(text, cls, () => batchResolve(decision));
+      b.dataset.batch = decision;
+      b.disabled = true;
+      return b;
+    };
+    batchActs.append(
+      selCount,
+      selectAll,
+      clearAll,
+      relTypes.size ? selRel : el("span"),
+      mkBatch("批量接受", "tiny primary", "accept"),
+      mkBatch("批量拒绝", "tiny", "reject"),
+      mkBatch("批量转未决", "tiny", "open_question"),
+    );
+    bar.appendChild(batchActs);
+    bar.appendChild(mkBtn("重新编译", "tiny", doCompile)); // validate + compile，刷新阅读器右栏
+    body.appendChild(bar);
+
     for (const it of items) {
       const card = el("div", "marker");
       const head = el("div", "m-head");
+      const check = el("input", "queue-check");
+      check.type = "checkbox";
+      check.value = it.id;
+      check.addEventListener("change", () => {
+        if (check.checked) queueSelection.add(it.id);
+        else queueSelection.delete(it.id);
+        refreshSel();
+      });
+      head.appendChild(check);
       head.appendChild(el("span", "m-type kind-exception", it.candidate_type || "升级项"));
       head.appendChild(el("span", "m-title", it.message || "需要裁决"));
       card.appendChild(head);
@@ -334,13 +385,41 @@ async function loadQueue() {
   }
 }
 
+async function afterResolve() {
+  await loadQueue();
+  await loadChapters();
+  if (state.currentChapter) await loadBlocks(state.currentChapter);
+}
+
 async function resolve(id, decision) {
   try {
     await api("/api/queue/resolve", "POST", { id, decision });
     toast(decision === "accept" ? "已接受并落盘" : decision === "reject" ? "已拒绝" : "已转未决问题");
-    await loadQueue();
-    await loadChapters();
-    if (state.currentChapter) await loadBlocks(state.currentChapter);
+    await afterResolve();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function batchResolve(decision) {
+  const ids = [...queueSelection];
+  if (ids.length === 0) return;
+  const label = decision === "accept" ? "接受并落盘" : decision === "reject" ? "拒绝" : "转未决问题";
+  if (!confirm(`批量${label} ${ids.length} 项？`)) return;
+  try {
+    const decisions = ids.map((id) => ({ id, decision }));
+    const r = await api("/api/queue/resolve-batch", "POST", { decisions });
+    toast(`批量完成：接受 ${r.accepted} / 拒绝 ${r.rejected} / 转未决 ${r.open_questions}`);
+    await afterResolve();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function doCompile() {
+  try {
+    const r = await api("/api/compile", "POST");
+    toast(`已重新编译：accepted ${r.accepted}，警告 ${r.warnings}`);
   } catch (err) {
     toast(err.message, true);
   }

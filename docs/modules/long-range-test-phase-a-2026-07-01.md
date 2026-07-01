@@ -50,10 +50,10 @@ npx tsx scripts/long-range-phase-a.ts --run-model --work /tmp/gt-longrange-4vol-
 
 长跨度物件：通过。`entity_unmailed_list` 从卷 1 建立，卷 3 与空白档案关联，卷 4 作为公开证据送达。
 
-关系追踪：流程安全但未自动落盘。`relation_change` 候选按高风险规则升级为 review item，因此 `accepted/relation_changes.jsonl` 仍为 0。关系信息部分进入 event/fact，但如果阅读器强依赖 relation_change，需要补批量裁决。
+关系追踪：流程安全，需人工收口。`relation_change` 候选按高风险规则升级为 review item，因此复核后 `accepted/relation_changes.jsonl` 仍为 0。**已补批量裁决入口并在本数据集验证闭环**：对 20 个 review item 中的 10 个 `relation_change` 批量接受后，`accepted/relation_changes.jsonl` 由 0 变 10，validate 通过、compile 后 `reader_index.accepted.relation_changes` 收录 10 条（林澈–许映白 陌生→谨慎合作→裂痕→结盟弧线随之进入阅读器右栏，按 `read_boundary` 防剧透）。入口：工作台队列面板批量操作 / `POST /api/queue/resolve-batch` + `POST /api/compile`。
 
 ## 结论
 
 Phase A（全局 Accepted 结构化记忆 + 当前卷正文）已经能支撑 4 卷长程制作：实体复用、关键伏笔回收、D 班点数弧线、未寄出的名单长线都能跑通。不加前卷原文也能保持主要跨卷结构。
 
-当前下一步不急着做 Phase B 前卷梗概；更优先的是补 review item 批量裁决 / 批量转 open_question，让高风险关系变化和伏笔推断有一个可审计的半自动收口。
+当前下一步不急着做 Phase B 前卷梗概。原先最优先的「补 review item 批量裁决 / 批量转 open_question」**已完成并验证**（见上「关系追踪」）：高风险关系变化和伏笔推断现在有可审计的批量收口，落盘后一键 compile 即可反映到阅读器。后续候选：批量合并同名实体入口、阅读器真实书籍长程压测、或 Phase B 三档扫。

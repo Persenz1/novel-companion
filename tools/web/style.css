@@ -132,6 +132,11 @@ input[type="text"], input[type="password"] {
 .m-detail { margin-top: 6px; font-size: 12px; color: #444; white-space: pre-wrap; word-break: break-all; background: #fafbfc; border-radius: 6px; padding: 7px; max-height: 180px; overflow: auto; }
 .m-actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
 
+.queue-bar { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border, #333); }
+.queue-batch { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.queue-batch .sel-count { color: var(--muted); font-size: 12px; margin-right: 2px; }
+.queue-check { margin: 0 2px 0 0; cursor: pointer; }
+
 .empty { color: var(--muted); text-align: center; padding: 30px 10px; }
 
 .change-row { border-bottom: 1px solid var(--line); padding: 8px 0; font-size: 12px; }
