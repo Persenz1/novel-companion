@@ -52,7 +52,7 @@
 
         <section class="panel">
           <h2>章节 · 生成范围</h2>
-          <p class="hint">起草与复核按整章进行。</p>
+          <p class="hint">起草与复核 v2 按「卷 + pass」运行（选中章节即定卷）。</p>
           <ul class="chapter-list" id="chapter-list"></ul>
         </section>
       </aside>
@@ -62,6 +62,12 @@
         <div class="col-head">
           <span id="mid-title">请选择左侧章节</span>
           <div class="actions">
+            <select id="pass-select" title="起草/复核的 pass">
+              <option value="entities">1 实体名册</option>
+              <option value="knowledge">2 事实/数值/术语</option>
+              <option value="narrative">3 事件/关系</option>
+              <option value="speakers">4 说话人</option>
+            </select>
             <button class="primary" id="btn-draft" disabled>起草</button>
             <button class="primary" id="btn-review" disabled>复核</button>
           </div>

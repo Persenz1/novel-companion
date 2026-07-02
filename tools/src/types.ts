@@ -163,6 +163,8 @@ export interface Candidate {
   id: string;
   series_id: string;
   type: string;
+  /** 起草 v2：产出该候选的 pass（entities/knowledge/narrative/speakers）。 */
+  pass?: string;
   block_id?: string;
   source_span: SourceSpan;
   visible_from: string;

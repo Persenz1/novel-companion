@@ -4,20 +4,31 @@
 // 高风险升级成异常队列里的 ReviewItem 交人裁决。详见
 // docs/modules/ai-workbench.md。
 import { FileStore } from "../fileStore.js";
-import type { Candidate, Manifest, ManifestVolume } from "../types.js";
+import type { Block, Candidate, Manifest, ManifestVolume } from "../types.js";
 import type { WorkbenchConfig } from "./config.js";
 import { isModelReady } from "./config.js";
-import { chat, extractJson } from "./llm.js";
+import { chat, parseJsonlLoose, type ChatMessage } from "./llm.js";
 import { AgentStore } from "./agentStore.js";
 import { WorkbenchData } from "./workbenchData.js";
 import {
-  DRAFTER_SYSTEM,
-  REVIEWER_SYSTEM,
-  buildDrafterUser,
-  buildReviewerUser,
+  GENERIC_SYSTEM,
+  DRAFT_PASSES,
+  DRAFT_PASS_IDS,
+  buildVolumePrefix,
+  buildDraftTail,
+  buildSpeakerRetryTail,
+  buildContinueMessage,
+  buildReviewTail,
+  renderAcceptedMemory,
   type ChapterSection,
+  type DraftPassId,
+  type DraftWindowMeta,
+  type ReviewCandidateView,
 } from "./prompts.js";
 import { isBodyChapterKind } from "../chapterKind.js";
+
+export type { DraftPassId };
+export { DRAFT_PASS_IDS };
 
 type Rec = Record<string, unknown>;
 
@@ -32,16 +43,6 @@ function chapterKey(chapterId: string): string {
   return chapterId.replace(/[.]/g, "_");
 }
 
-function normalizeBlockRef(chapterId: string, blockId: unknown, valid: Set<string>, fallback: string): string {
-  const raw = String(blockId ?? "").trim();
-  if (valid.has(raw)) return raw;
-  if (/^b\d{4,}$/i.test(raw)) {
-    const full = `${chapterId}.${raw}`;
-    if (valid.has(full)) return full;
-  }
-  return fallback;
-}
-
 function nextSeqId(rows: Rec[], prefix: string): (n: number) => string {
   let base = 0;
   for (const r of rows) {
@@ -53,18 +54,6 @@ function nextSeqId(rows: Rec[], prefix: string): (n: number) => string {
 
 function manifestOf(store: FileStore): Manifest {
   return store.readJson<Manifest>("manifest.json");
-}
-
-function chapterTitle(manifest: Manifest, chapterId: string): string {
-  for (const v of manifest.volumes) for (const ch of v.chapters) if (ch.id === chapterId) return ch.title;
-  return chapterId;
-}
-
-/** 找到包含某章节的卷。 */
-function volumeForChapter(manifest: Manifest, chapterId: string): ManifestVolume {
-  const v = manifest.volumes.find((x) => x.chapters.some((ch) => ch.id === chapterId));
-  if (!v) throw new Error(`找不到章节 ${chapterId} 所属的卷`);
-  return v;
 }
 
 /** 整卷正文按 manifest 章节顺序分段（作为完整背景），空章节跳过。 */
@@ -217,246 +206,578 @@ function autoAcceptBlockers(
   return blockers;
 }
 
-// ----- 起草 -----
+// ----- 起草 v2：分 pass + 窗口（docs/modules/drafting-review-v2-design.md） -----
 
-export interface DraftResult {
-  chapter_id: string;
-  created: number;
-  model: string;
-  candidates: Candidate[];
+/** 稀疏抽取 pass 的窗口目标 block 数；说话人 pass 的窗口目标 dialogue 块数。 */
+const SPARSE_WINDOW_TARGET = 250;
+const SPEAKER_WINDOW_TARGET = 80;
+/** 截断续写的最大轮数。 */
+const MAX_CONTINUATIONS = 2;
+/** 说话人覆盖缺口的最大补跑轮数（每轮只补上一轮仍缺的块，无进展则提前停止）。 */
+const SPEAKER_MISSING_RETRY_ROUNDS = 3;
+
+/** blockId（v01.c22.b0058）所属章节 id（v01.c22）。 */
+function chapterOfBlock(blockId: string): string {
+  return blockId.split(".").slice(0, -1).join(".");
 }
 
-export async function runDraft(
+export interface WindowOptions {
+  /** 目标计数：countDialogueOnly 时按 dialogue 块计，否则按全部块计。 */
+  target: number;
+  countDialogueOnly?: boolean;
+}
+
+/**
+ * 把整卷正文顺序切成连续窗口：达到目标量 80% 后遇 separator 或章节边界即切，
+ * 硬上限 140% 强制切。输出预算因此与文本量线性，不再随章节长短失衡。
+ */
+export function buildDraftWindows(blocks: Block[], opts: WindowOptions): Block[][] {
+  const soft = Math.max(1, Math.floor(opts.target * 0.8));
+  const hard = Math.max(soft, Math.ceil(opts.target * 1.4));
+  const windows: Block[][] = [];
+  let cur: Block[] = [];
+  let count = 0;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i]!;
+    cur.push(b);
+    if (!opts.countDialogueOnly || b.kind === "dialogue") count += 1;
+
+    const next = blocks[i + 1];
+    const atBoundary = b.kind === "separator" || !next || next.chapter_id !== b.chapter_id;
+    if ((count >= soft && atBoundary) || count >= hard) {
+      windows.push(cur);
+      cur = [];
+      count = 0;
+    }
+  }
+  if (cur.length) {
+    // 尾窗过小则并入上一窗，避免碎窗。
+    if (count < soft / 2 && windows.length) windows[windows.length - 1]!.push(...cur);
+    else windows.push(cur);
+  }
+  return windows;
+}
+
+/** 窗口内 block 引用归一化：短 id（b0058）在窗口内唯一可展开则展开。 */
+function makeRefNormalizer(windowBlocks: Block[], volumeBlockIds: Set<string>) {
+  const bySuffix = new Map<string, string | null>();
+  for (const b of windowBlocks) {
+    const suffix = b.id.split(".").pop()!;
+    bySuffix.set(suffix, bySuffix.has(suffix) ? null : b.id);
+  }
+  return (ref: unknown, fallback: string): string => {
+    const raw = String(ref ?? "").trim();
+    if (volumeBlockIds.has(raw)) return raw;
+    const expanded = bySuffix.get(raw);
+    if (expanded) return expanded;
+    return fallback;
+  };
+}
+
+function sumUsage(usages: Array<Rec | undefined>): Rec | undefined {
+  const merged: Rec = {};
+  for (const u of usages) {
+    if (!u) continue;
+    for (const [k, v] of Object.entries(u)) {
+      if (typeof v === "number") merged[k] = ((merged[k] as number) ?? 0) + v;
+    }
+  }
+  if (typeof merged.prompt_cache_hit_tokens === "number" && typeof merged.prompt_cache_miss_tokens === "number") {
+    const total = (merged.prompt_cache_hit_tokens as number) + (merged.prompt_cache_miss_tokens as number);
+    if (total > 0) merged.prompt_cache_hit_ratio = Number(((merged.prompt_cache_hit_tokens as number) / total).toFixed(4));
+  }
+  return Object.keys(merged).length ? merged : undefined;
+}
+
+interface JsonlChatOutcome {
+  rows: Rec[];
+  badLines: number;
+  model: string;
+  usage?: Rec;
+  truncated: boolean;
+}
+
+/**
+ * 一次 JSONL 会话：prefix+tail 拼成单条 user 消息（prefix 稳定在前，命中前缀缓存），
+ * finish_reason=length 时自动续写，行结果合并。
+ */
+async function chatJsonl(
+  modelCfg: WorkbenchConfig["drafter"],
+  prefix: string,
+  tail: string,
+  options: typeof DRAFT_CHAT_OPTIONS | typeof REVIEW_CHAT_OPTIONS,
+): Promise<JsonlChatOutcome> {
+  const messages: ChatMessage[] = [
+    { role: "system", content: GENERIC_SYSTEM },
+    { role: "user", content: prefix + tail },
+  ];
+  const usages: Array<Rec | undefined> = [];
+  let rows: Rec[] = [];
+  let badLines = 0;
+  let truncated = false;
+  let model = modelCfg.model;
+
+  for (let round = 0; ; round++) {
+    const res = await chat(modelCfg, messages, options);
+    model = res.model;
+    usages.push(tokenUsage(res.usage));
+    const parsed = parseJsonlLoose<Rec>(res.text);
+    rows = rows.concat(parsed.rows);
+    badLines += parsed.badLines;
+    if (res.finishReason !== "length") break;
+    if (round >= MAX_CONTINUATIONS) {
+      truncated = true;
+      break;
+    }
+    messages.push({ role: "assistant", content: res.text });
+    messages.push({ role: "user", content: buildContinueMessage(rows.length) });
+  }
+  return { rows, badLines, model, usage: sumUsage(usages), truncated };
+}
+
+export interface DraftPassResult {
+  volume_id: string;
+  pass: DraftPassId;
+  windows: number;
+  created: number;
+  bad_lines: number;
+  model: string;
+  /** speakers pass：unknown 判定数（满足覆盖但不建候选）与补漏后仍缺的对话块数。 */
+  speaker_unknown?: number;
+  speaker_missing?: number;
+}
+
+export async function runDraftPass(
   store: FileStore,
   cfg: WorkbenchConfig,
-  chapterId: string,
-): Promise<DraftResult> {
+  volumeId: string,
+  passId: DraftPassId,
+): Promise<DraftPassResult> {
   if (!isModelReady(cfg.drafter)) throw new Error("起草模型未配置，请先在面板填好 base_url / api_key / model。");
+  const spec = DRAFT_PASSES[passId];
+  if (!spec) throw new Error(`未知起草 pass：${passId}（可选 ${DRAFT_PASS_IDS.join("/")}）`);
+
   const data = new WorkbenchData(store);
   const manifest = data.manifest();
-  const targetBlocks = data.blocksForChapter(chapterId);
-  if (targetBlocks.length === 0) throw new Error(`章节 ${chapterId} 没有 block，无法起草。`);
-  // 目标按章，但背景喂整卷正文，保持连续性。
-  const background = volumeSections(data, volumeForChapter(manifest, chapterId));
+  const volume = manifest.volumes.find((v) => v.id === volumeId);
+  if (!volume) throw new Error(`找不到卷：${volumeId}`);
+  const sections = volumeSections(data, volume);
+  const volBlocks = sections.flatMap((s) => s.blocks);
+  if (volBlocks.length === 0) throw new Error(`卷 ${volumeId} 没有正文 block。`);
+
   const accepted = data.accepted();
+  const prefix = buildVolumePrefix(volume.title, sections, renderAcceptedMemory(accepted));
+  const volumeBlockIds = new Set(volBlocks.map((b) => b.id));
 
-  const res = await chat(
-    cfg.drafter,
-    [
-      { role: "system", content: DRAFTER_SYSTEM },
-      { role: "user", content: buildDrafterUser(chapterTitle(manifest, chapterId), targetBlocks, background, accepted) },
-    ],
-    // max_tokens 顶高，避免多候选 JSON 被供应商较低的默认值截断成半截。
-    DRAFT_CHAT_OPTIONS,
-  );
-
-  const parsed = extractJson<{ candidates?: Rec[] }>(res.text);
-  const raw = Array.isArray(parsed.candidates) ? parsed.candidates : [];
+  const windows =
+    passId === "entities"
+      ? [volBlocks]
+      : passId === "speakers"
+        ? buildDraftWindows(volBlocks, { target: SPEAKER_WINDOW_TARGET, countDialogueOnly: true }).filter((w) =>
+            w.some((b) => b.kind === "dialogue"),
+          )
+        : buildDraftWindows(volBlocks, { target: SPARSE_WINDOW_TARGET });
 
   const existing = store.readJsonl<Candidate>(CANDIDATES).rows;
-  const mkId = nextSeqId(existing as unknown as Rec[], `cand_${chapterKey(chapterId)}_`);
-  const taskId = `task_${chapterKey(chapterId)}_${Date.now().toString(36)}`;
-  const firstId = targetBlocks[0]!.id;
-  const lastId = targetBlocks[targetBlocks.length - 1]!.id;
-  const validTargetBlockIds = new Set(targetBlocks.map((b) => b.id));
+  const mkId = nextSeqId(existing as unknown as Rec[], `cand_${volumeId}_${passId}_`);
+  const taskId = `task_${volumeId}_${passId}_${Date.now().toString(36)}`;
+  const created: Candidate[] = [];
+  let badLines = 0;
+  let unknownTotal = 0;
+  let missingTotal = 0;
+  let lastModel = cfg.drafter.model;
+  let seq = 0;
 
-  const created: Candidate[] = raw.map((r, i) => {
-    const rawSpan = (r.source_span as Candidate["source_span"]) ?? {
-      start_block: firstId,
-      end_block: firstId,
+  const allowedTypes = new Set(spec.types);
+  // 逐窗口落盘：单窗失败（如供应商临时 503）不丢已完成窗口的候选与 work_run，
+  // 重跑同一 pass 前建议先清掉本卷本 pass 的旧候选（参考 drafting-review-v2-design.md）。
+  let persisted = existing as unknown as Rec[];
+
+  for (let wi = 0; wi < windows.length; wi++) {
+    const win = windows[wi]!;
+    const normalizeRef = makeRefNormalizer(win, volumeBlockIds);
+    const dialogueIds = win.filter((b) => b.kind === "dialogue").map((b) => b.id);
+    const meta: DraftWindowMeta = {
+      startBlock: win[0]!.id,
+      endBlock: win[win.length - 1]!.id,
+      blockCount: win.length,
+      dialogueCount: dialogueIds.length,
+      windowIndex: wi + 1,
+      windowTotal: windows.length,
     };
-    const span = {
-      start_block: normalizeBlockRef(chapterId, rawSpan.start_block, validTargetBlockIds, firstId),
-      end_block: normalizeBlockRef(chapterId, rawSpan.end_block, validTargetBlockIds, firstId),
-    };
-    const payload = (r.payload as Candidate["payload"]) ?? {};
-    return {
-      id: mkId(i + 1),
-      series_id: manifest.series.id,
-      type: String(r.type ?? payload.target_type ?? "entity"),
-      block_id: span.start_block,
-      source_span: span,
-      visible_from: normalizeBlockRef(chapterId, r.visible_from ?? span.end_block, validTargetBlockIds, span.end_block),
-      confidence: typeof r.confidence === "number" ? r.confidence : 0.6,
-      status: "pending_review",
-      model: res.model,
-      task_id: taskId,
-      payload: {
-        target_type: payload.target_type ?? String(r.type ?? "entity"),
-        draft: payload.draft ?? {},
-        evidence: payload.evidence ?? "",
-        risk_flags: payload.risk_flags ?? [],
+
+    let outcome: JsonlChatOutcome;
+    try {
+      outcome = await chatJsonl(cfg.drafter, prefix, buildDraftTail(spec, meta), DRAFT_CHAT_OPTIONS);
+    } catch (err) {
+      appendJsonl(store, WORK_RUNS, [
+        {
+          id: `work_${volumeId}_${passId}_w${wi + 1}_${Date.now().toString(36)}`,
+          volume_id: volumeId,
+          pass: passId,
+          stage: "draft",
+          window_index: wi + 1,
+          window_total: windows.length,
+          start_block: meta.startBlock,
+          end_block: meta.endBlock,
+          status: "failed",
+          error: (err as Error).message,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      throw new Error(
+        `${volumeId}/${passId} 第 ${wi + 1}/${windows.length} 窗失败：${(err as Error).message}（此前 ${wi} 窗已落盘，无需重跑）`,
+      );
+    }
+    lastModel = outcome.model;
+    badLines += outcome.badLines;
+    let rows = outcome.rows;
+    let windowUnknown = 0;
+    let windowMissing: string[] = [];
+
+    if (passId === "speakers") {
+      // 全覆盖契约：缺判定的对话块循环补跑，直到补齐或连续两轮无进展（如模型放弃整段）才记入覆盖缺口。
+      const judgedIds = () => new Set(rows.map((r) => normalizeRef(r.block_id, "")).filter(Boolean));
+      windowMissing = dialogueIds.filter((id) => !judgedIds().has(id));
+      for (let r = 0; r < SPEAKER_MISSING_RETRY_ROUNDS && windowMissing.length; r++) {
+        const before = windowMissing.length;
+        let retry: JsonlChatOutcome;
+        try {
+          retry = await chatJsonl(cfg.drafter, prefix, buildSpeakerRetryTail(windowMissing), DRAFT_CHAT_OPTIONS);
+        } catch {
+          break; // 补跑请求失败（如临时 503）：保留本窗已判定的部分，记为覆盖缺口，不影响其它窗口。
+        }
+        badLines += retry.badLines;
+        rows = rows.concat(retry.rows);
+        windowMissing = dialogueIds.filter((id) => !judgedIds().has(id));
+        if (windowMissing.length >= before) break; // 无进展，模型对这些块给不出判定，停止重试。
+      }
+      missingTotal += windowMissing.length;
+    }
+
+    const windowCreated: Candidate[] = [];
+    const dialogueIdSet = new Set(dialogueIds);
+    const seenSpeakerBlocks = new Set<string>();
+
+    for (const r of rows) {
+      if (passId === "speakers") {
+        const blockId = normalizeRef(r.block_id, "");
+        if (!blockId || !dialogueIdSet.has(blockId) || seenSpeakerBlocks.has(blockId)) continue;
+        seenSpeakerBlocks.add(blockId);
+        const speakerType = String(r.speaker_type ?? "unknown");
+        if (speakerType === "unknown") {
+          windowUnknown += 1;
+          continue; // 满足覆盖即可，unknown 不进候选。
+        }
+        seq += 1;
+        const draft: Rec = {
+          id: `speaker_${blockId.replace(/[.]/g, "_")}`,
+          series_id: manifest.series.id,
+          block_id: blockId,
+          speaker_type: speakerType,
+          ...(r.speaker_entity_id ? { speaker_entity_id: String(r.speaker_entity_id) } : {}),
+          display_name: String(r.display_name ?? ""),
+          confidence: typeof r.confidence === "number" ? r.confidence : 0.6,
+          visible_from: blockId,
+          source_span: { start_block: blockId, end_block: blockId },
+          status: "accepted",
+        };
+        windowCreated.push({
+          id: mkId(seq),
+          series_id: manifest.series.id,
+          type: "speaker_label",
+          pass: passId,
+          block_id: blockId,
+          source_span: { start_block: blockId, end_block: blockId },
+          visible_from: blockId,
+          confidence: draft.confidence as number,
+          status: "pending_review",
+          model: outcome.model,
+          task_id: taskId,
+          payload: { target_type: "speaker_label", draft, evidence: String(r.evidence ?? ""), risk_flags: [] },
+        });
+        continue;
+      }
+
+      // 稀疏 pass：候选行 {type, source_span, visible_from, confidence, draft, evidence, risk_flags}
+      const type = String(r.type ?? "");
+      if (!allowedTypes.has(type)) continue;
+      const rawSpan = (r.source_span as { start_block?: unknown; end_block?: unknown }) ?? {};
+      const start = normalizeRef(rawSpan.start_block, meta.startBlock);
+      const end = normalizeRef(rawSpan.end_block, start);
+      const draft = (r.draft as Rec) ?? {};
+      if (draft.series_id == null) draft.series_id = manifest.series.id;
+      if (draft.status == null) draft.status = "accepted";
+      seq += 1;
+      windowCreated.push({
+        id: mkId(seq),
+        series_id: manifest.series.id,
+        type,
+        pass: passId,
+        block_id: start,
+        source_span: { start_block: start, end_block: end },
+        visible_from: normalizeRef(r.visible_from, end),
+        confidence: typeof r.confidence === "number" ? r.confidence : 0.6,
+        status: "pending_review",
+        model: outcome.model,
+        task_id: taskId,
+        payload: {
+          target_type: type,
+          draft,
+          evidence: String(r.evidence ?? ""),
+          risk_flags: Array.isArray(r.risk_flags) ? (r.risk_flags as string[]) : [],
+        },
+      });
+    }
+
+    unknownTotal += windowUnknown;
+    created.push(...windowCreated);
+
+    // 逐窗口落盘：本窗完成即写，后续窗口若失败不影响已完成窗口的结果。
+    persisted = persisted.concat(windowCreated as unknown as Rec[]);
+    store.writeJsonl(CANDIDATES, persisted);
+    appendJsonl(store, WORK_RUNS, [
+      {
+        id: `work_${volumeId}_${passId}_w${wi + 1}_${Date.now().toString(36)}`,
+        volume_id: volumeId,
+        pass: passId,
+        stage: "draft",
+        window_index: wi + 1,
+        window_total: windows.length,
+        start_block: meta.startBlock,
+        end_block: meta.endBlock,
+        status: "completed",
+        created_candidate_count: windowCreated.length,
+        bad_lines: outcome.badLines,
+        ...(outcome.truncated ? { truncated: true } : {}),
+        ...(passId === "speakers"
+          ? { dialogue_blocks: dialogueIds.length, unknown_count: windowUnknown, missing_ids: windowMissing }
+          : {}),
+        drafter_model: outcome.model,
+        request_options: DRAFT_CHAT_OPTIONS,
+        context_estimate: { window_blocks: win.length, volume_blocks: volBlocks.length },
+        ...(outcome.usage ? { token_usage: outcome.usage } : {}),
+        created_at: new Date().toISOString(),
       },
-    };
-  });
+    ]);
+  }
 
-  store.writeJsonl(CANDIDATES, (existing as unknown as Rec[]).concat(created as unknown as Rec[]));
-
-  appendJsonl(store, WORK_RUNS, [
-    {
-      id: `work_${chapterKey(chapterId)}_draft_${Date.now().toString(36)}`,
-      chapter_id: chapterId,
-      stage: "draft",
-      start_block: firstId,
-      end_block: lastId,
-      status: "completed",
-      created_candidate_count: created.length,
-      drafter_model: res.model,
-      request_options: DRAFT_CHAT_OPTIONS,
-      context_estimate: { target_blocks: targetBlocks.length, background_blocks: background.flatMap((s) => s.blocks).length },
-      ...(tokenUsage(res.usage) ? { token_usage: tokenUsage(res.usage) } : {}),
-      created_at: new Date().toISOString(),
-    },
-  ]);
-
-  return { chapter_id: chapterId, created: created.length, model: res.model, candidates: created };
+  return {
+    volume_id: volumeId,
+    pass: passId,
+    windows: windows.length,
+    created: created.length,
+    bad_lines: badLines,
+    model: lastModel,
+    ...(passId === "speakers" ? { speaker_unknown: unknownTotal, speaker_missing: missingTotal } : {}),
+  };
 }
 
 // ----- 复核 -----
 
-export interface ReviewResult {
-  chapter_id: string;
+// ----- 复核 v2：按 pass 分批 + 专用 checklist + 高风险代码级强制升级 -----
+
+const SPARSE_REVIEW_BATCH = 25;
+const SPEAKER_REVIEW_BATCH = 60;
+
+function chunk<T>(rows: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
+  return out;
+}
+
+/** 高风险类别代码级强制升级（不依赖复核模型自觉）。返回升级原因，null 表示不强制。 */
+function forcedEscalation(c: Candidate, draft: Rec): string | null {
+  if (c.type === "relation_change") return "高风险类别（关系变化）按硬约束升级人裁决";
+  if (c.type === "speaker_label" && draft.speaker_type === "ambiguous") return "歧义说话人按硬约束升级人裁决";
+  return null;
+}
+
+export interface ReviewPassResult {
+  volume_id: string;
+  pass: DraftPassId;
   reviewed: number;
   auto_accepted: number;
   escalated: number;
   rejected: number;
+  batches: number;
   reviewer_model: string;
 }
 
-export async function runReview(
+export async function runReviewPass(
   store: FileStore,
   cfg: WorkbenchConfig,
-  chapterId: string,
-): Promise<ReviewResult> {
+  volumeId: string,
+  passId: DraftPassId,
+): Promise<ReviewPassResult> {
   if (!isModelReady(cfg.reviewer)) throw new Error("复核模型未配置，请先在面板填好 base_url / api_key / model。");
+  const spec = DRAFT_PASSES[passId];
+  if (!spec) throw new Error(`未知复核 pass：${passId}（可选 ${DRAFT_PASS_IDS.join("/")}）`);
+
   const data = new WorkbenchData(store);
   const manifest = data.manifest();
-  const chapterBlockIds = new Set(data.blocksForChapter(chapterId).map((b) => b.id));
+  const volume = manifest.volumes.find((v) => v.id === volumeId);
+  if (!volume) throw new Error(`找不到卷：${volumeId}`);
+
   const allCandidates = store.readJsonl<Candidate>(CANDIDATES).rows;
+  const typeSet = new Set(spec.types);
   const pending = allCandidates.filter(
-    (c) => c.status === "pending_review" && chapterBlockIds.has(c.source_span.start_block),
+    (c) =>
+      c.status === "pending_review" &&
+      String(c.source_span.start_block).startsWith(`${volumeId}.`) &&
+      (c.pass ? c.pass === passId : typeSet.has(c.type)),
   );
   if (pending.length === 0)
-    return { chapter_id: chapterId, reviewed: 0, auto_accepted: 0, escalated: 0, rejected: 0, reviewer_model: cfg.reviewer.model };
+    return { volume_id: volumeId, pass: passId, reviewed: 0, auto_accepted: 0, escalated: 0, rejected: 0, batches: 0, reviewer_model: cfg.reviewer.model };
 
-  // 复核也喂整卷背景，便于核对依据与跨章一致性。
-  const background = volumeSections(data, volumeForChapter(manifest, chapterId));
+  // 复核共享同一稳定前缀（全卷正文 + 已确认记忆），批间命中缓存。
+  const sections = volumeSections(data, volume);
   const accepted = data.accepted();
-  const res = await chat(
-    cfg.reviewer,
-    [
-      { role: "system", content: REVIEWER_SYSTEM },
-      {
-        role: "user",
-        content: buildReviewerUser(
-          pending.map((c) => ({ id: c.id, type: c.type, source_span: c.source_span as unknown as Rec, payload: c.payload as unknown as Rec })),
-          background,
-          accepted,
-        ),
-      },
-    ],
-    REVIEW_CHAT_OPTIONS,
-  );
-
-  const parsed = extractJson<{ decisions?: Rec[] }>(res.text);
-  const decisions = new Map<string, Rec>();
-  for (const d of parsed.decisions ?? []) decisions.set(String((d as { candidate_id?: string }).candidate_id), d);
-  const autoDraftIds = collectAutoDraftIds(pending, decisions);
+  const prefix = buildVolumePrefix(volume.title, sections, renderAcceptedMemory(accepted));
 
   const agentStore = new AgentStore(store, manifest.series.id);
-  const workRunId = `work_${chapterKey(chapterId)}_review_${Date.now().toString(36)}`;
-  const byId = new Map(allCandidates.map((c) => [c.id, c]));
-
   const reviewItems = store.readJsonl<Rec>(REVIEW_ITEMS).rows;
-  const mkReviewId = nextSeqId(reviewItems, `review_${chapterKey(chapterId)}_`);
+  const mkReviewId = nextSeqId(reviewItems, `review_${volumeId}_${passId}_`);
   const newReviewItems: Rec[] = [];
 
   let autoAccepted = 0;
   let escalated = 0;
   let rejected = 0;
+  let reviewerModel = cfg.reviewer.model;
 
-  pending.forEach((c, i) => {
-    const d = decisions.get(c.id);
-    const route = String((d as { route?: string })?.route ?? "escalate");
-    const reason = String((d as { reason?: string })?.reason ?? "复核未给出理由，默认升级。");
-    const target = byId.get(c.id)!;
+  const batches = chunk(pending, passId === "speakers" ? SPEAKER_REVIEW_BATCH : SPARSE_REVIEW_BATCH);
 
-    if (route === "auto") {
-      const edited = (d as { edited_draft?: Rec }).edited_draft;
-      const draft = (edited && Object.keys(edited).length ? edited : c.payload.draft) as Rec;
-      if (!draft || !draft.id) {
-        // 草案不完整，安全起见改为升级。
-        newReviewItems.push(buildReviewItem(mkReviewId(escalated + 1), c, "草案缺少 id，复核改判升级。", chapterId, manifest.series.id));
-        target.status = "converted_to_review_item";
-        escalated += 1;
-        return;
-      }
-      const blockers = autoAcceptBlockers(c.type, draft, accepted, autoDraftIds);
-      if (blockers.length) {
-        newReviewItems.push(
-          buildReviewItem(
-            mkReviewId(escalated + 1),
-            c,
-            `自动写入前校验失败：${blockers.join("；")}。`,
-            chapterId,
-            manifest.series.id,
-            "改后接受或转未决问题",
-          ),
-        );
-        target.status = "converted_to_review_item";
-        escalated += 1;
-        return;
-      }
-      agentStore.write(c.type, draft, {
-        operation: edited && Object.keys(edited).length ? "accept_candidate_with_edit" : "accept_candidate",
-        decidedBy: "reviewer_agent",
-        autoAccepted: true,
-        approvedBy: res.model,
-        reason,
-        candidateId: c.id,
-        reviewerModel: res.model,
-        workRunId,
-      });
-      target.status = edited && Object.keys(edited).length ? "accepted_with_edit" : "accepted";
-      autoAccepted += 1;
-    } else if (route === "reject") {
-      target.status = "rejected";
-      rejected += 1;
-    } else {
-      const rec = String((d as { recommended_action?: string })?.recommended_action ?? "");
-      newReviewItems.push(buildReviewItem(mkReviewId(escalated + 1), c, reason, chapterId, manifest.series.id, rec));
-      target.status = "converted_to_review_item";
-      escalated += 1;
+  for (let bi = 0; bi < batches.length; bi++) {
+    const batch = batches[bi]!;
+    const views: ReviewCandidateView[] = batch.map((c) => ({
+      candidate_id: c.id,
+      type: c.type,
+      source_span: c.source_span as unknown as Rec,
+      draft: c.payload.draft,
+      evidence: c.payload.evidence,
+    }));
+
+    let outcome: JsonlChatOutcome;
+    try {
+      outcome = await chatJsonl(cfg.reviewer, prefix, buildReviewTail(passId, views), REVIEW_CHAT_OPTIONS);
+    } catch (err) {
+      appendJsonl(store, WORK_RUNS, [
+        {
+          id: `work_${volumeId}_${passId}_review_b${bi + 1}_${Date.now().toString(36)}`,
+          volume_id: volumeId,
+          pass: passId,
+          stage: "review",
+          batch_index: bi + 1,
+          batch_total: batches.length,
+          status: "failed",
+          error: (err as Error).message,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      throw new Error(
+        `${volumeId}/${passId} 复核第 ${bi + 1}/${batches.length} 批失败：${(err as Error).message}（此前 ${bi} 批已落盘，无需重跑）`,
+      );
     }
-  });
+    reviewerModel = outcome.model;
+    const decisions = new Map<string, Rec>();
+    for (const d of outcome.rows) decisions.set(String(d.candidate_id ?? ""), d);
+    const autoDraftIds = collectAutoDraftIds(batch, decisions);
+    const workRunId = `work_${volumeId}_${passId}_review_b${bi + 1}_${Date.now().toString(36)}`;
 
-  store.writeJsonl(CANDIDATES, allCandidates as unknown as Rec[]);
-  if (newReviewItems.length) store.writeJsonl(REVIEW_ITEMS, reviewItems.concat(newReviewItems));
+    for (const c of batch) {
+      const d = decisions.get(c.id);
+      let route = String((d as { route?: string })?.route ?? "escalate");
+      let reason = String((d as { reason?: string })?.reason ?? "复核未给出决定，默认升级。");
+      const chapterId = chapterOfBlock(c.source_span.start_block);
+      const edited = (d as { edited_draft?: Rec })?.edited_draft;
+      const draft = (edited && Object.keys(edited).length ? edited : c.payload.draft) as Rec;
 
-  appendJsonl(store, WORK_RUNS, [
-    {
-      id: workRunId,
-      chapter_id: chapterId,
-      stage: "review",
-      status: "completed",
-      auto_accepted_count: autoAccepted,
-      escalated_count: escalated,
-      rejected_count: rejected,
-      drafter_model: pending[0]?.model ?? "",
-      reviewer_model: res.model,
-      request_options: REVIEW_CHAT_OPTIONS,
-      ...(tokenUsage(res.usage) ? { token_usage: tokenUsage(res.usage) } : {}),
-      created_at: new Date().toISOString(),
-    },
-  ]);
+      const forced = draft ? forcedEscalation(c, draft) : null;
+      if (route === "auto" && forced) {
+        route = "escalate";
+        reason = `${forced}。复核意见：${reason}`;
+      }
+
+      if (route === "auto") {
+        if (!draft || !draft.id) {
+          newReviewItems.push(buildReviewItem(mkReviewId(newReviewItems.length + 1), c, "草案缺少 id，复核改判升级。", chapterId, manifest.series.id));
+          c.status = "converted_to_review_item";
+          escalated += 1;
+          continue;
+        }
+        const blockers = autoAcceptBlockers(c.type, draft, accepted, autoDraftIds);
+        if (blockers.length) {
+          newReviewItems.push(
+            buildReviewItem(
+              mkReviewId(newReviewItems.length + 1),
+              c,
+              `自动写入前校验失败：${blockers.join("；")}。`,
+              chapterId,
+              manifest.series.id,
+              "改后接受或转未决问题",
+            ),
+          );
+          c.status = "converted_to_review_item";
+          escalated += 1;
+          continue;
+        }
+        agentStore.write(c.type, draft, {
+          operation: edited && Object.keys(edited).length ? "accept_candidate_with_edit" : "accept_candidate",
+          decidedBy: "reviewer_agent",
+          autoAccepted: true,
+          approvedBy: outcome.model,
+          reason,
+          candidateId: c.id,
+          reviewerModel: outcome.model,
+          workRunId,
+        });
+        c.status = edited && Object.keys(edited).length ? "accepted_with_edit" : "accepted";
+        autoAccepted += 1;
+      } else if (route === "reject") {
+        c.status = "rejected";
+        rejected += 1;
+      } else {
+        const rec = String((d as { recommended_action?: string })?.recommended_action ?? "");
+        newReviewItems.push(buildReviewItem(mkReviewId(newReviewItems.length + 1), c, reason, chapterId, manifest.series.id, rec));
+        c.status = "converted_to_review_item";
+        escalated += 1;
+      }
+    }
+
+    // 逐批落盘：本批完成即写候选状态/异常队列/work_run，后续批次若失败不丢已完成批次的结果。
+    store.writeJsonl(CANDIDATES, allCandidates as unknown as Rec[]);
+    if (newReviewItems.length) store.writeJsonl(REVIEW_ITEMS, reviewItems.concat(newReviewItems));
+    appendJsonl(store, WORK_RUNS, [
+      {
+        id: workRunId,
+        volume_id: volumeId,
+        pass: passId,
+        stage: "review",
+        batch_index: bi + 1,
+        batch_total: batches.length,
+        status: "completed",
+        reviewed_count: batch.length,
+        bad_lines: outcome.badLines,
+        ...(outcome.truncated ? { truncated: true } : {}),
+        drafter_model: batch[0]?.model ?? "",
+        reviewer_model: outcome.model,
+        request_options: REVIEW_CHAT_OPTIONS,
+        ...(outcome.usage ? { token_usage: outcome.usage } : {}),
+        created_at: new Date().toISOString(),
+      },
+    ]);
+  }
 
   return {
-    chapter_id: chapterId,
+    volume_id: volumeId,
+    pass: passId,
     reviewed: pending.length,
     auto_accepted: autoAccepted,
     escalated,
     rejected,
-    reviewer_model: res.model,
+    batches: batches.length,
+    reviewer_model: reviewerModel,
   };
 }
 

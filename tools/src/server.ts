@@ -17,7 +17,7 @@ import {
 } from "./agent/config.js";
 import { WorkbenchData } from "./agent/workbenchData.js";
 import { AgentStore } from "./agent/agentStore.js";
-import { runDraft, runReview, resolveException, resolveExceptionsBatch } from "./agent/pipeline.js";
+import { runDraftPass, runReviewPass, resolveException, resolveExceptionsBatch, type DraftPassId } from "./agent/pipeline.js";
 import type { ResolveDecision } from "./agent/pipeline.js";
 import { buildReaderBook } from "./readerView.js";
 import { CompiledQuery } from "./query.js";
@@ -438,15 +438,16 @@ async function handleApi(
     return;
   }
 
+  // 起草/复核 v2：按 卷+pass 运行（docs/modules/drafting-review-v2-design.md）。
   if (pathname === "/api/draft" && method === "POST") {
     const body = await readBody(req);
-    const result = await runDraft(openBookpack(cfg), cfg, String(body.chapter_id));
+    const result = await runDraftPass(openBookpack(cfg), cfg, String(body.volume_id), String(body.pass) as DraftPassId);
     return sendJson(res, 200, result);
   }
 
   if (pathname === "/api/review" && method === "POST") {
     const body = await readBody(req);
-    const result = await runReview(openBookpack(cfg), cfg, String(body.chapter_id));
+    const result = await runReviewPass(openBookpack(cfg), cfg, String(body.volume_id), String(body.pass) as DraftPassId);
     return sendJson(res, 200, result);
   }
 

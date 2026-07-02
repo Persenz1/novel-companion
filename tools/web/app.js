@@ -238,7 +238,8 @@ function startProgress(label, model) {
   const tick = () => {
     const sec = Math.round((Date.now() - start) / 1000);
     let txt = `⏳ ${label}（模型 ${model}）… 已用 ${sec}s`;
-    if (sec >= 60) txt += " — 偏慢，可能网络/额度问题，请耐心或检查";
+    if (sec >= 600) txt += " — 超过 10 分钟，若窗口很多属正常，可查终端日志确认仍在推进";
+    else if (sec >= 60) txt += " — pass 会分窗/分批多次调用模型，整卷需要几分钟，属正常";
     else if (sec >= 30) txt += " — 大段文本较慢，仍在处理中";
     showBanner(txt, true);
   };
@@ -247,14 +248,28 @@ function startProgress(label, model) {
   return () => clearInterval(timer);
 }
 
+// v2：按「卷 + pass」运行；卷取当前选中章节所属卷（v01.c13 -> v01）。
+function currentVolume() {
+  return state.currentChapter ? state.currentChapter.split(".")[0] : null;
+}
+
+function currentPass() {
+  return $("#pass-select").value;
+}
+
 async function doDraft() {
-  if (!state.currentChapter) return;
+  const volumeId = currentVolume();
+  if (!volumeId) return;
+  const pass = currentPass();
   setBusy(true);
-  const stop = startProgress("起草中", state.drafterModel);
+  const stop = startProgress(`起草中（${volumeId} · ${pass}，分窗多次调用）`, state.drafterModel);
   try {
-    const r = await api("/api/draft", "POST", { chapter_id: state.currentChapter });
+    const r = await api("/api/draft", "POST", { volume_id: volumeId, pass });
     stop();
-    showBanner(`✅ 起草完成：新增 ${r.created} 条候选（模型 ${r.model}）。点「复核」让复核模型路由。`);
+    let msg = `✅ 起草完成：${r.volume_id}/${r.pass} 共 ${r.windows} 窗，新增 ${r.created} 条候选（模型 ${r.model}）。`;
+    if (r.pass === "speakers") msg += ` unknown ${r.speaker_unknown}，覆盖缺口 ${r.speaker_missing}。`;
+    if (r.bad_lines) msg += ` 坏行 ${r.bad_lines}。`;
+    showBanner(msg + "点「复核」让复核模型路由。");
     toast(`起草完成，新增 ${r.created} 条候选`);
     await loadBlocks(state.currentChapter);
     await loadChapters();
@@ -268,14 +283,16 @@ async function doDraft() {
 }
 
 async function doReview() {
-  if (!state.currentChapter) return;
+  const volumeId = currentVolume();
+  if (!volumeId) return;
+  const pass = currentPass();
   setBusy(true);
-  const stop = startProgress("复核中", state.reviewerModel);
+  const stop = startProgress(`复核中（${volumeId} · ${pass}，分批多次调用）`, state.reviewerModel);
   try {
-    const r = await api("/api/review", "POST", { chapter_id: state.currentChapter });
+    const r = await api("/api/review", "POST", { volume_id: volumeId, pass });
     stop();
     showBanner(
-      `✅ 复核完成（${r.reviewer_model}）：自动落盘 ${r.auto_accepted}，升级 ${r.escalated}，拒绝 ${r.rejected}。` +
+      `✅ 复核完成（${r.reviewer_model}，${r.batches} 批）：自动落盘 ${r.auto_accepted}，升级 ${r.escalated}，拒绝 ${r.rejected}。` +
         (r.escalated ? "升级项见右侧「异常队列」。" : ""),
     );
     toast(`复核完成：自动 ${r.auto_accepted} / 升级 ${r.escalated} / 拒绝 ${r.rejected}`);

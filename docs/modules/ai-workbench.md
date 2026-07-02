@@ -1,15 +1,19 @@
 # 模块：AI 数据工作台
 
+> **2026-07-02 起草/复核已重构为 v2（分 pass + 窗口 + 稳定前缀缓存）**，运行单位从「章」改为「卷 + pass」，
+> 设计与动机见 [drafting-review-v2-design](drafting-review-v2-design.md)。本文其余部分的双 AI 制衡、
+> 异常队列、审计回滚机制不变。
+
 ## 需求
 
 清洗后的结构化制作采用双 AI 流水线：
 
 ```text
-选章节 / 范围
--> 起草 Agent 生成 Candidates
--> 复核 Agent 独立路由
+选卷 + pass（1 实体名册 / 2 事实数值术语 / 3 事件关系 / 4 说话人）
+-> 起草 Agent 分窗生成 Candidates（JSONL 容截断）
+-> 复核 Agent 分批独立路由（pass 专用 checklist）
    -> 低风险自动写 Accepted + Change
-   -> 高风险进异常队列
+   -> 高风险进异常队列（关系变化 / 歧义说话人代码级强制升级）
    -> 无依据拒绝
 -> 人清异常队列、审计 Change、必要时回滚
 ```

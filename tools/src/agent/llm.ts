@@ -27,6 +27,8 @@ export interface ChatResult {
   model: string;
   provider: string;
   usage?: Record<string, unknown>;
+  /** OpenAI 协议的 finish_reason；"length" 表示输出被 max_tokens 截断。 */
+  finishReason?: string;
 }
 
 export class LlmError extends Error {}
@@ -60,12 +62,66 @@ export async function chat(
   }
 
   const data = (await resp.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
     usage?: Record<string, unknown>;
   };
   const text = data.choices?.[0]?.message?.content;
   if (typeof text !== "string") throw new LlmError("模型响应缺少 choices[0].message.content。");
-  return { text, model: cfg.model, provider: req.provider, usage: data.usage };
+  return {
+    text,
+    model: cfg.model,
+    provider: req.provider,
+    usage: data.usage,
+    finishReason: data.choices?.[0]?.finish_reason,
+  };
+}
+
+export interface JsonlParseResult<T> {
+  rows: T[];
+  /** 无法解析的行数（截断尾行、模型夹带的说明文字等）。 */
+  badLines: number;
+}
+
+/**
+ * 容截断的 JSONL 解析：一行一个 JSON 对象，坏行跳过并计数。
+ * 起草/复核 v2 的输出协议——截断只丢最后一行，已输出的行照收
+ * （设计见 docs/modules/drafting-review-v2-design.md §6）。
+ * 兼容 ```json 围栏与整段被包成 {"candidates":[...]} / [...] 的旧式输出。
+ */
+export function parseJsonlLoose<T = Record<string, unknown>>(text: string): JsonlParseResult<T> {
+  const fenced = text.match(/```(?:json[l5]?)?\s*([\s\S]*?)```/i);
+  const body = (fenced?.[1] ?? text).trim();
+
+  // 模型不听话时可能仍输出单个数组/包裹对象，先试整体解析。
+  try {
+    const whole = JSON.parse(body) as unknown;
+    if (Array.isArray(whole)) return { rows: whole as T[], badLines: 0 };
+    if (whole && typeof whole === "object") {
+      for (const v of Object.values(whole as Record<string, unknown>)) {
+        if (Array.isArray(v)) return { rows: v as T[], badLines: 0 };
+      }
+      return { rows: [whole as T], badLines: 0 };
+    }
+  } catch {
+    /* 逐行解析 */
+  }
+
+  const rows: T[] = [];
+  let badLines = 0;
+  for (const raw of body.split("\n")) {
+    const line = raw.trim().replace(/,\s*$/, "");
+    if (!line) continue;
+    if (!line.startsWith("{") && !line.startsWith("[")) {
+      badLines += 1;
+      continue;
+    }
+    try {
+      rows.push(JSON.parse(line) as T);
+    } catch {
+      badLines += 1;
+    }
+  }
+  return { rows, badLines };
 }
 
 /**

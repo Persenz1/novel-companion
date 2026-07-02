@@ -44,6 +44,7 @@ Markdown 阅读器已实现并**与工作台合并**（`tools/`，`npm run workb
 - [兼容性测试规划](docs/modules/compatibility-testing-plan.md)
 - [模型供应商适配](docs/modules/provider-adapters.md)
 - [AI 数据工作台](docs/modules/ai-workbench.md)
+- [起草/复核 v2 设计](docs/modules/drafting-review-v2-design.md)
 - [编译查询](docs/modules/compiled-query.md)
 - [阅读器](docs/modules/reader.md)
 - [长程制作测试](docs/modules/long-range-test.md)

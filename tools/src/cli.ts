@@ -43,6 +43,8 @@ function usage(): never {
   console.error("  nc cleaning-changes <bookpack-dir>                     # 列出清洗 change");
   console.error("  nc rollback-cleaning <bookpack-dir> <changeId>");
   console.error("  nc cleaning-readiness <bookpack-dir>                   # 收口验收清单");
+  console.error("  nc draft-pass <bookpack-dir> <volume_id> <pass>        # 起草 v2：pass=entities|knowledge|narrative|speakers");
+  console.error("  nc review-pass <bookpack-dir> <volume_id> <pass>       # 复核 v2：同上 pass；模型读 tools/.workbench-config.json");
   process.exit(2);
 }
 
@@ -350,6 +352,30 @@ function cmdCleaningReadiness(args: string[]): void {
   if (!r.ready) process.exitCode = 1;
 }
 
+/** 起草/复核 v2（分 pass）：模型配置读 tools/.workbench-config.json，与工作台共用。 */
+async function cmdDraftPass(args: string[], stage: "draft" | "review"): Promise<void> {
+  const [bookpackDir, volumeId, pass] = args;
+  if (!bookpackDir || !volumeId || !pass) usage();
+  const { loadConfig } = await import("./agent/config.js");
+  const { runDraftPass, runReviewPass, DRAFT_PASS_IDS } = await import("./agent/pipeline.js");
+  if (!(DRAFT_PASS_IDS as string[]).includes(pass)) {
+    console.error(`未知 pass：${pass}（可选 ${DRAFT_PASS_IDS.join("/")}）`);
+    process.exit(2);
+  }
+  const store = new FileStore(bookpackDir);
+  const cfg = loadConfig();
+  if (stage === "draft") {
+    const r = await runDraftPass(store, cfg, volumeId, pass as never);
+    console.log(`[draft-pass] ${volumeId}/${pass} windows=${r.windows} created=${r.created} bad_lines=${r.bad_lines} model=${r.model}`);
+    if (r.speaker_unknown != null) console.log(`  speaker: unknown=${r.speaker_unknown} missing=${r.speaker_missing}`);
+  } else {
+    const r = await runReviewPass(store, cfg, volumeId, pass as never);
+    console.log(
+      `[review-pass] ${volumeId}/${pass} reviewed=${r.reviewed} auto=${r.auto_accepted} escalated=${r.escalated} rejected=${r.rejected} batches=${r.batches} model=${r.reviewer_model}`,
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   switch (command) {
@@ -397,6 +423,12 @@ async function main(): Promise<void> {
       break;
     case "cleaning-readiness":
       cmdCleaningReadiness(rest);
+      break;
+    case "draft-pass":
+      await cmdDraftPass(rest, "draft");
+      break;
+    case "review-pass":
+      await cmdDraftPass(rest, "review");
       break;
     default:
       usage();
