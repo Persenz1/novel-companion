@@ -14,13 +14,15 @@
         <a class="ghost navlink" href="/">数据工作台</a>
         <button class="ghost" id="btn-toc">目录</button>
         <label class="disp speaker-toggle"><input type="checkbox" id="chk-speaker" checked /><span>说话人</span></label>
-        <label class="disp"><span>显示</span>
-          <select id="disp-mode">
-            <option value="both">中日双语</option>
-            <option value="zh">仅中文</option>
-            <option value="ja">仅日文</option>
-          </select>
-        </label>
+        <div class="compare-control" id="compare-control" aria-label="双语对照">
+          <span class="control-label">双语</span>
+          <div class="segmented" id="disp-mode">
+            <button type="button" data-mode="zh">中文</button>
+            <button type="button" data-mode="both">对照</button>
+            <button type="button" data-mode="ja">原文</button>
+          </div>
+          <span class="ref-status" id="ref-status"></span>
+        </div>
         <button class="ghost" id="btn-return" title="回到已读边界">返回已读处</button>
         <button class="primary" id="btn-mark" title="把已读边界推进到当前位置">标记读到此处</button>
       </div>

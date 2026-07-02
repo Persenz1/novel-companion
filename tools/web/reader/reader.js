@@ -55,13 +55,14 @@ async function init() {
     state.order = book.order;
     book.order.forEach((id, i) => state.indexOf.set(id, i));
     $("#pack-status").textContent = `${book.pack_name}（${book.series.title}）`;
-    if (!book.has_ja) $(".disp").style.display = "none";
     if (!book.has_speakers) $(".speaker-toggle").style.display = "none";
+    state.displayMode = book.has_ja ? "both" : "zh";
     document.body.dataset.mode = state.displayMode;
     document.body.classList.toggle("speakers-on", state.showSpeakers);
     renderProse(book.sections);
     renderToc(book.toc);
     bindEvents();
+    updateDisplayControl();
     state.currentIndex = 0;
     state.boundaryIndex = 0;
     updateBlockStyles();
@@ -309,8 +310,24 @@ function returnToBoundary() {
 }
 
 function setDisplayMode(mode) {
+  if (!state.book?.has_ja && mode !== "zh") {
+    toast("当前数据包还没有原文对照。");
+    mode = "zh";
+  }
   state.displayMode = mode;
   document.body.dataset.mode = mode; // CSS 按 mode 控制中/日段落显隐
+  updateDisplayControl();
+  refreshPanel();
+}
+
+function updateDisplayControl() {
+  const hasRef = !!state.book?.has_ja;
+  $("#ref-status").textContent = hasRef ? "" : "未匹配原文";
+  for (const btn of document.querySelectorAll("#disp-mode button")) {
+    const mode = btn.dataset.mode;
+    btn.classList.toggle("active", mode === state.displayMode);
+    btn.disabled = !hasRef && mode !== "zh";
+  }
 }
 
 // ---------- 事件绑定 ----------
@@ -328,7 +345,9 @@ function bindEvents() {
   $("#btn-toc").onclick = () => $(".layout").classList.toggle("toc-open");
   $("#btn-mark").onclick = markReadHere;
   $("#btn-return").onclick = returnToBoundary;
-  $("#disp-mode").onchange = (e) => setDisplayMode(e.target.value);
+  for (const btn of document.querySelectorAll("#disp-mode button")) {
+    btn.onclick = () => setDisplayMode(btn.dataset.mode);
+  }
   $("#chk-speaker").onchange = (e) => {
     state.showSpeakers = e.target.checked;
     document.body.classList.toggle("speakers-on", state.showSpeakers);
