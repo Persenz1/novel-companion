@@ -24,6 +24,25 @@ export function buildReaderBook(store: FileStore): Rec {
     for (const [bid, text] of Object.entries(map)) if (text) jaByBlock.set(bid, text);
   }
 
+  // 说话人：accepted/speaker_labels.jsonl（Accepted 正式数据），按 block 挂到正文。
+  // 一个 block 可有 0..N 个说话人（群体对话）；只有带标记的才显示，无标记不加。
+  // 防剧透交给阅读器侧按 visible_from 与已读边界显隐（与 read/beyond 同一套）。
+  const speakersByBlock = new Map<string, Rec[]>();
+  if (store.exists("accepted/speaker_labels.jsonl")) {
+    for (const s of store.readJsonl<Rec>("accepted/speaker_labels.jsonl").rows) {
+      if (s.status && s.status !== "accepted") continue;
+      const bid = s.block_id as string;
+      if (!bid) continue;
+      const arr = speakersByBlock.get(bid) ?? [];
+      arr.push({
+        name: (s.display_name as string) || (s.speaker_entity_id as string) || (s.speaker_type as string) || "说话人",
+        speaker_type: s.speaker_type ?? null,
+        visible_from: (s.visible_from as string) || bid,
+      });
+      speakersByBlock.set(bid, arr);
+    }
+  }
+
   const blocksByChapter = new Map<string, Block[]>();
   for (const b of blocks) {
     const arr = blocksByChapter.get(b.chapter_id) ?? [];
@@ -75,6 +94,7 @@ export function buildReaderBook(store: FileStore): Rec {
           index: order.length - 1,
           assets: assetsForBlock(b.id),
           text_ja: jaByBlock.get(b.id) ?? null,
+          speakers: speakersByBlock.get(b.id) ?? [],
         });
       }
     }
@@ -84,6 +104,7 @@ export function buildReaderBook(store: FileStore): Rec {
     pack_name: manifest.pack_name,
     series: manifest.series,
     has_ja: jaByBlock.size > 0,
+    has_speakers: speakersByBlock.size > 0,
     sections,
     order,
     toc,

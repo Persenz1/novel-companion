@@ -105,6 +105,18 @@ button.ghost { background: transparent; }
 body[data-mode="zh"] .blk.ja { display: none; }
 body[data-mode="ja"] .blk.zh { display: none; }
 
+/* 说话人标记：正文左侧空白栏，纯文字，对齐段落首行。默认随 body.speakers-on 显隐，
+   并只有到达已读边界（.sp-visible）后才出现，防止提前泄漏说话人。 */
+.blk.zh { position: relative; }
+.speaker-tag {
+  display: none;
+  position: absolute; right: 100%; top: 0.15em; margin-right: 14px;
+  width: 8em; text-align: right; white-space: normal;
+  font-size: 13px; line-height: 1.5; color: var(--accent);
+  font-weight: 600; pointer-events: none;
+}
+body.speakers-on .speaker-tag.sp-visible { display: block; }
+
 .blk-asset { margin: 14px 0; text-align: center; }
 .blk-asset img { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .blk-asset figcaption { color: var(--muted); font-size: 12px; margin-top: 4px; }

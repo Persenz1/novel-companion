@@ -20,6 +20,7 @@ const state = {
   currentIndex: 0,
   boundaryIndex: 0,
   displayMode: "both", // both | zh | ja
+  showSpeakers: true, // 中间栏左侧显示说话人标记
   suppressUntil: 0, // 程序化滚动窗口内不推进边界
   lastScrollTop: 0,
   lastScrollTime: 0,
@@ -55,7 +56,9 @@ async function init() {
     book.order.forEach((id, i) => state.indexOf.set(id, i));
     $("#pack-status").textContent = `${book.pack_name}（${book.series.title}）`;
     if (!book.has_ja) $(".disp").style.display = "none";
+    if (!book.has_speakers) $(".speaker-toggle").style.display = "none";
     document.body.dataset.mode = state.displayMode;
+    document.body.classList.toggle("speakers-on", state.showSpeakers);
     renderProse(book.sections);
     renderToc(book.toc);
     bindEvents();
@@ -92,6 +95,17 @@ function renderProse(sections) {
       p.dataset.blockId = sec.id;
       p.dataset.index = String(sec.index);
       p.onclick = () => selectBlock(sec.index);
+
+      // 说话人标记：放在正文左侧空白栏（纯文字），按 visible_from 与已读边界显隐。
+      // 群体对话有多个标记就都列出，无标记不加。
+      if (sec.speakers && sec.speakers.length) {
+        const tag = el("span", "speaker-tag");
+        tag.textContent = sec.speakers.map((s) => s.name).join("、");
+        const vf = sec.speakers[0].visible_from;
+        tag.dataset.vfIndex = String(state.indexOf.get(vf) ?? sec.index);
+        p.appendChild(tag);
+        p._speaker = tag;
+      }
       prose.appendChild(p);
       state.blockEls.set(sec.id, p);
 
@@ -200,6 +214,11 @@ function updateBlockStyles() {
       n.classList.toggle("beyond", !read);
       n.classList.toggle("current", current);
     }
+    // 说话人标记：其 visible_from 到达已读边界后才显示（防剧透）。
+    if (node._speaker) {
+      const vfIdx = Number(node._speaker.dataset.vfIndex);
+      node._speaker.classList.toggle("sp-visible", vfIdx <= state.boundaryIndex);
+    }
   }
 }
 
@@ -237,63 +256,20 @@ async function refreshPanel() {
   }
 }
 
+// 增强阅读区已清空为空白画布：右栏不再渲染 9 类 Accepted 平铺条目，
+// 只保留当前位置标题、越界提示和取数管线（refreshPanel 仍拉 getVisibleContext，
+// ctx 供后续重做增强 UI 使用）。等信息架构定稿后在此基础上重建。
 function renderPanel(ctx) {
-  $("#panel-title").textContent = ctx.current_scene?.title
-    ? `场景：${ctx.current_scene.title}`
-    : "当前位置";
+  $("#panel-title").textContent = "增强信息（重建中）";
   $("#panel-sub").textContent = ctx.is_ahead_of_boundary
-    ? `当前 ${state.order[state.currentIndex]} · 越过已读边界，按边界过滤`
+    ? `当前 ${state.order[state.currentIndex]} · 越过已读边界`
     : `当前 ${state.order[state.currentIndex]}`;
 
   const body = $("#panel-body");
   body.replaceChildren();
-
-  const groups = [
-    ["说话人", ctx.speaker_labels, (s) => s.display_name || s.speaker_entity_id || s.speaker_type],
-    ["图中人物", flattenSubjects(ctx.assets), (s) => s.entity_id],
-    ["人物 / 实体", ctx.entities, (e) => `${e.name}`, (e) => e.type],
-    ["角色卡", ctx.character_cards, (c) => c.entity_id, (c) => c.short_summary],
-    ["术语卡", ctx.term_cards, (t) => t.title, (t) => t.summary],
-    ["事实", ctx.facts, (f) => `${f.subject_id} · ${f.predicate}`, (f) => String(f.value ?? f.value_entity_id ?? "")],
-    ["事件", ctx.events, (e) => e.title, (e) => e.summary],
-    ["关系变化", ctx.relation_changes, (r) => (r.entities || []).join(" ↔ "), (r) => `${r.before} → ${r.after}`],
-    ["数值变化", ctx.metric_changes, (m) => m.metric_id, (m) => `${m.old_value} → ${m.new_value}`],
-  ];
-
-  let any = false;
-  for (const [label, rows, title, desc] of groups) {
-    if (!rows || !rows.length) continue;
-    any = true;
-    const card = el("div", "card");
-    card.appendChild(el("h3", null, `${label} · ${rows.length}`));
-    for (const r of rows) {
-      const item = el("div", "item");
-      item.appendChild(el("div", "item-title", String(title(r) ?? "")));
-      const d = desc ? desc(r) : "";
-      if (d) item.appendChild(el("div", "item-desc", String(d)));
-      card.appendChild(item);
-    }
-    body.appendChild(card);
-  }
-
-  if (!any) {
-    body.appendChild(
-      el("div", "empty", "此处暂无已确认的增强信息（仅展示 Accepted，按已读边界过滤）。"),
-    );
-  }
-
-  if (ctx.warnings && ctx.warnings.length) {
-    const w = el("div", "card");
-    w.appendChild(el("h3", null, "提示"));
-    for (const msg of ctx.warnings) w.appendChild(el("div", "item-desc", msg));
-    body.appendChild(w);
-  }
-}
-
-function flattenSubjects(assets) {
-  const out = [];
-  for (const a of assets || []) for (const s of a.subjects || []) out.push(s);
-  return out;
+  body.appendChild(
+    el("div", "empty", "增强阅读区待重建：右栏信息显示已清空，将在数据包基础上重新设计。"),
+  );
 }
 
 // ---------- 跳转 / 操作 ----------
@@ -353,6 +329,10 @@ function bindEvents() {
   $("#btn-mark").onclick = markReadHere;
   $("#btn-return").onclick = returnToBoundary;
   $("#disp-mode").onchange = (e) => setDisplayMode(e.target.value);
+  $("#chk-speaker").onchange = (e) => {
+    state.showSpeakers = e.target.checked;
+    document.body.classList.toggle("speakers-on", state.showSpeakers);
+  };
 }
 
 init();
