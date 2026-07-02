@@ -1,6 +1,6 @@
 import { FileStore } from "../fileStore.js";
 import type { Asset, AssetAnchor, Block, Manifest, ManifestChapter } from "../types.js";
-import { isBodyChapterKind } from "../chapterKind.js";
+import { isReadableChapterKind } from "../chapterKind.js";
 
 type Rec = Record<string, unknown>;
 
@@ -76,7 +76,7 @@ export function prepareMimoCleaningInputs(store: FileStore, volumeId?: string): 
   for (const volume of manifest.volumes) {
     if (volumeId && volume.id !== volumeId) continue;
     for (const chapter of [...volume.chapters].sort((a, b) => a.order - b.order)) {
-      if (!isBodyChapterKind(chapter.kind)) continue;
+      if (!isReadableChapterKind(chapter.kind)) continue;
       const chapterBlocks = blocks
         .filter((block) => block.chapter_id === chapter.id)
         .sort((a, b) => a.order - b.order);
@@ -177,6 +177,8 @@ function buildTask(
     `字段名只能使用 id/type/target/confidence/risk/reason/patch；不要使用 action/detail/priority/value。\n` +
     `type 只能是 split_block、merge_blocks、drop_noise、retitle_chapter、set_block_kind、set_scene、set_asset_alt、move_asset_anchor。\n` +
     `target 必须是本任务里真实存在的 block_id、chapter_id 或 asset_id，禁止输出 asset_or_block_id 等占位值。\n` +
+    `封面、标题页、制作信息、目录、彩页、后记、特典短篇都属于读者会看到的书籍内容；` +
+    `不要仅因章节不是主线剧情就建议删除。只有下载站残留、重复垃圾、明显导入噪声才建议 drop_noise。\n` +
     `patch 必须是对象，且按类型给字段：\n` +
     `  set_asset_alt → {"alt":"一句话中文图注"}；alt 只描述画面本身（谁、在做什么、场景），一律用中文，30 字内，` +
     `不要写“设置 alt 为”之类的话，不要抄录图中大段日文/英文。\n` +
@@ -197,6 +199,7 @@ function buildTask(
     constraints: [
       "不要改写小说正文。",
       "只提出结构清洗建议、图片图注建议和明显噪声处理建议。",
+      "封面、目录、彩页、后记、特典短篇等前后页也是阅读材料，不要仅因其不是主线剧情而删除。",
       "删除、跨章移动、合并章节、人物身份判断都必须标为 high risk。",
       "图注一律用中文；alt 只描述画面，不抄图中大段外文，不写“设置 alt”之类的话。",
       "仅含数字/符号的场景分隔 block 已由系统规范化，不要再对其提 drop_noise/set_scene。",

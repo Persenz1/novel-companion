@@ -40,7 +40,7 @@
 
 ### E. 全链贯通
 - [x] COTE v01-v03：import → normalize/MiMo → ingest → apply → compile → 阅读器基线；v01 清洗按既有测试结果保留，不重复改动
-- [x] 非正文页从阅读时间线剔除（timeline / readerView / MiMo feed / agent 背景按 `isBodyChapterKind` 过滤）
+- [x] 阅读流与抽取边界分离（readerView / MiMo feed 纳入书籍可读材料；agent 背景按 `isBodyChapterKind` 过滤）
 - [x] 阅读器渲染中日双语正文，目录默认展开；图片显示仍需在后续阅读器制作作业中继续审阅
 
 ## 每本书的测试流程（清单）

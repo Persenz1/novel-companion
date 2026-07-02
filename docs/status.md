@@ -65,5 +65,5 @@
 - `AgentStore` 已避免实体 first_seen 被后卷覆盖、避免非实体同 ID 内容静默覆盖；但 Change `before` 仍不足以恢复完整 update / merge / deprecate。
 - 清洗 MiMo 建议的通用应用器已实现（`applySuggestion` + `cleaningStore.commitVolumeChange`：采纳 -> 改 Markdown/manifest -> reparse/validate -> 失败自动回滚 -> 记 `accepted/cleaning_changes.jsonl`）；仍未做的是 split_block/merge_blocks 自动化（当前人工）。
 - EPUB importer 多个单卷 EPUB append 汇入同一 bookpack 已用真实 COTE 三卷（v01/v02/v03）验证通过；真实 EPUB 的脚注 / 跨文件章节 / 异常 nav 仍需继续扩大样本（见 `modules/compatibility-testing-plan.md`）。
-- 非正文页已按强信号分类章节 kind（`classifyChapterKind`），timeline、readerView、MiMo 清洗任务和 agent 整卷背景均按 `isBodyChapterKind` 过滤，封面 / 制作信息 / 目录 / 后记 / 特典不进入故事阅读和 agent 处理。
+- 非主线页已按强信号分类章节 kind（`classifyChapterKind`）。清洗任务和阅读器按“书籍可读材料”纳入封面 / 制作信息 / 目录 / 彩页 / 后记 / 特典；agent 整卷背景仍按 `isBodyChapterKind` 只抽故事正文，避免把前后页当剧情证据。
 - 阅读器防剧透已在 4 卷、填满 accepted 的工作副本上做过长程压测（gray-tower `v01`–`v04`，239 个时间线位置全扫）：0 越界泄漏、0 非单调回退，reveal 曲线单调（实体 14→23→31→36、relation_change 1→4→7→10），spoiler-bound 关系卡在其 `visible_from` 前一块隐藏、到位后出现。**真实书籍**级别的长程阅读压测仍未做；提交态样例包 accepted 为空，右栏走空态，需跑 agent 或 fixture 填数据后才见实体 / 卡片。

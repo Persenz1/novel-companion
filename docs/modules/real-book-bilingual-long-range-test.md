@@ -58,7 +58,7 @@
 - 真实书阅读器主产物采用 `source/ja/{volume}.blocks.json`（block_id -> 日文正文）。
 - `tools/scripts/mimo-ja-alignment.ts` 是本轮真实书 v01 的 MiMo 辅助匹配脚本，输出 `source/ja/v01.blocks.json`、`review/ja_alignment_items.jsonl`、`reports/ja_alignment_report.json` 与 `reports/ja_alignment_mimo_outputs/*.json`。
 - `tools/scripts/match-ja-reference.ts` 保留为非 MiMo 顺序匹配 / 初筛工具，不作为最终验收依据。
-- 非正文页已贯穿过滤：timeline、readerView、MiMo 清洗任务、agent 整卷背景均跳过非正文 chapter kind。
+- 封面、目录、彩页、后记、特典等前后页属于书籍阅读材料：清洗任务和阅读器会纳入；agent 整卷背景仍跳过非故事 chapter kind，防止它们进入剧情结构化抽取。
 - 中文译注等中文独有内容以 alignment review item 记录，不强行匹配日文，也不作为剧情结构化证据。
 
 ## 本轮问题

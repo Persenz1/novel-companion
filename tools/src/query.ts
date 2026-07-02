@@ -58,9 +58,9 @@ export class CompiledQuery {
     options: VisibleContextOptions = {},
   ): VisibleContext {
     const warnings: string[] = [];
-    if (!this.has(readBoundary)) throw new Error(`read_boundary 不是时间线位置：${readBoundary}`);
+    if (!this.has(readBoundary)) throw new Error(`read_boundary 不是阅读时间线位置：${readBoundary}`);
     if (!this.has(currentBlock)) {
-      warnings.push(`current_block 不是时间线位置：${currentBlock}`);
+      warnings.push(`current_block 不是阅读时间线位置：${currentBlock}`);
     }
 
     const isAhead = this.has(currentBlock) && comparePositions(this.timeline, currentBlock, readBoundary) > 0;

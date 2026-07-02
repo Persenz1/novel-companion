@@ -1,17 +1,16 @@
-// Chinese-main-text timeline, shared by Validator and Compiler.
+// Chinese reading timeline, shared by Validator and Compiler.
 //
-// Phase 1 spoiler comparison only recognises positions derived from the
-// Chinese body (docs/modules/bookpack-data.md,
-// docs/modules/compiled-query.md):
+// Spoiler comparison recognises positions derived from readable Chinese
+// chapters (docs/modules/bookpack-data.md, docs/modules/compiled-query.md):
 //
 //   v01.start  v01.c01.start  v01.c01.b0001  v01.c01.end  v01.end
 //
 // `visible_from <= read_boundary` is decided by integer order in this list,
 // never by string sort. semester_1.end / external:* / manual:* are NOT
-// comparable here and must be mapped to a body position before they can drive
-// reader queries.
+// comparable here and must be mapped to a readable position before they can
+// drive reader queries.
 import type { Block, Manifest } from "./types.js";
-import { isBodyChapterKind } from "./chapterKind.js";
+import { isReadableChapterKind } from "./chapterKind.js";
 
 export type PositionKind =
   | "volume_start"
@@ -33,7 +32,7 @@ export interface Timeline {
 }
 
 /**
- * Build the total order over body positions. Volumes follow manifest order;
+ * Build the total order over readable positions. Volumes follow manifest order;
  * chapters follow manifest `order`; blocks follow their parsed `order` within
  * the chapter. Blocks not declared in the manifest chapter list are skipped
  * (the Validator reports those separately).
@@ -55,7 +54,7 @@ export function buildTimeline(manifest: Manifest, blocks: Block[]): Timeline {
     push(`${volume.id}.start`, "volume_start");
     const chapters = [...volume.chapters].sort((a, b) => a.order - b.order);
     for (const chapter of chapters) {
-      if (!isBodyChapterKind(chapter.kind)) continue;
+      if (!isReadableChapterKind(chapter.kind)) continue;
       push(`${chapter.id}.start`, "chapter_start");
       for (const block of blocksByChapter.get(chapter.id) ?? []) {
         push(block.id, "block");
