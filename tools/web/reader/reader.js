@@ -136,12 +136,33 @@ function assetFigure(a) {
 function renderToc(toc) {
   const list = $("#toc-list");
   list.replaceChildren();
+  const volumeTitles = new Map((state.book?.volumes || []).map((v) => [v.id, v.title]));
+  const grouped = new Map();
   for (const ch of toc) {
-    const li = el("li", `kind-${ch.kind}`, ch.title);
-    li.onclick = () => {
-      jumpToChapter(ch.id);
-    };
-    list.appendChild(li);
+    const arr = grouped.get(ch.volume_id) || [];
+    arr.push(ch);
+    grouped.set(ch.volume_id, arr);
+  }
+  for (const [volumeId, chapters] of grouped) {
+    const details = document.createElement("details");
+    details.className = "toc-volume";
+    details.open = list.children.length === 0;
+    const summary = document.createElement("summary");
+    summary.append(
+      el("span", "toc-volume-title", volumeTitles.get(volumeId) || volumeId),
+      el("span", "toc-volume-meta", `${chapters.length} 章`),
+    );
+    details.appendChild(summary);
+    const ul = document.createElement("ul");
+    for (const ch of chapters) {
+      const li = el("li", `kind-${ch.kind}`, ch.title);
+      li.onclick = () => {
+        jumpToChapter(ch.id);
+      };
+      ul.appendChild(li);
+    }
+    details.appendChild(ul);
+    list.appendChild(details);
   }
 }
 

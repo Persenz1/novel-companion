@@ -38,7 +38,7 @@ import {
   rollbackChange,
   type CleaningChange,
 } from "./cleaning/cleaningStore.js";
-import type { Asset, AssetAnchor, Block } from "./types.js";
+import type { Asset, AssetAnchor, Block, Manifest } from "./types.js";
 
 type Rec = Record<string, unknown>;
 
@@ -106,6 +106,14 @@ function slugId(value: string): string {
 
 function epubPathsFromBody(body: Rec): string[] {
   const raw = Array.isArray(body.epub_paths) ? body.epub_paths : [body.epub_path];
+  return raw
+    .flatMap((value) => String(value ?? "").split(/\r?\n/))
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function referenceEpubPathsFromBody(body: Rec): string[] {
+  const raw = Array.isArray(body.reference_epub_paths) ? body.reference_epub_paths : [body.reference_epub_path];
   return raw
     .flatMap((value) => String(value ?? "").split(/\r?\n/))
     .map((value) => value.trim())
@@ -521,6 +529,7 @@ async function handleApi(
   if (pathname === "/api/cleaning/auto-start" && method === "POST") {
     const body = await readBody(req);
     const epubPaths = epubPathsFromBody(body);
+    const referenceEpubPaths = referenceEpubPathsFromBody(body);
     if (epubPaths.length === 0) return sendJson(res, 400, { error: "epub_path 必填。" });
     const stem = batchStem(epubPaths);
     const id = slugId(stem);
@@ -539,6 +548,52 @@ async function handleApi(
     const next = { ...cfg, bookpack_dir: targetDir };
     saveConfig(next);
     const store = new FileStore(targetDir);
+    let referenceImports: ReturnType<typeof importEpubToBookpack>[] = [];
+    let referenceSummary: Rec | null = null;
+    if (referenceEpubPaths.length > 0) {
+      const referenceDir = `${targetDir}__reference`;
+      referenceImports = referenceEpubPaths.map((epubPath, idx) =>
+        importEpubToBookpack(epubPath, referenceDir, {
+          volumeId: volumeIdForEpub(epubPath, idx),
+          seriesId: `${id}_reference`,
+          packId: `${id}_reference_project_v1`,
+          packName: `${stem} 对照原文`,
+          force: idx === 0,
+          append: idx > 0,
+          parseAndValidate: true,
+        }),
+      );
+      const chapterCount = referenceImports.reduce((n, item) => n + item.chapter_count, 0);
+      const blockCount = referenceImports.reduce((n, item) => n + item.block_count, 0);
+      const imageCount = referenceImports.reduce((n, item) => n + item.image_count, 0);
+      referenceSummary = {
+        epub_count: referenceImports.length,
+        volume_ids: referenceImports.flatMap((item) => item.volume_ids),
+        chapter_count: chapterCount,
+        block_count: blockCount,
+        image_count: imageCount,
+        validation_status: referenceImports[referenceImports.length - 1]?.validation?.status ?? "unknown",
+        reference_dir: referenceDir,
+      };
+      store.writeJson("reports/reference_epub_imports.json", {
+        schema_version: "0.1.0",
+        generated_at: new Date().toISOString(),
+        kind: "parallel_reference_epub",
+        role: "display_alignment_source",
+        note: "对照原文只作为后续段落匹配/阅读显示来源，不进入结构化起草复核证据。",
+        reference_dir: referenceDir,
+        imports: referenceImports,
+        summary: referenceSummary,
+      });
+      const manifest = store.readJson<Manifest>("manifest.json");
+      store.writeJson("manifest.json", {
+        ...manifest,
+        features: {
+          ...(manifest.features ?? {}),
+          has_reference_epub_source: true,
+        },
+      });
+    }
     // 确定性规范化在导入后自动执行（孤立数字/符号→separator），让下游任务与建议基于干净结构。
     const normalized = normalizeBookpack(store);
     const prepared = prepareMimoCleaningInputs(store);
@@ -558,6 +613,8 @@ async function handleApi(
       },
       normalized: { edits: normalized.total_edits },
       prepared,
+      reference_imports: referenceImports,
+      reference_import_summary: referenceSummary,
       target_dir: targetDir,
       config: redactConfig(next),
     });

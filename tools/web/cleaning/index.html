@@ -19,8 +19,12 @@
         <section class="panel">
           <h2>自动清洗</h2>
           <label class="field">
-            <span>EPUB 路径</span>
+            <span>中文 EPUB 路径</span>
             <textarea id="epub-path" class="text-input epub-input" placeholder="每行一个 EPUB 绝对路径"></textarea>
+          </label>
+          <label class="field">
+            <span>对照原文 EPUB 路径（可选）</span>
+            <textarea id="reference-epub-path" class="text-input epub-input small" placeholder="每行一个原文 EPUB，顺序与中文卷对应，如日文 v01/v02/v03"></textarea>
           </label>
           <button class="primary wide" id="btn-auto-clean">开始自动清洗</button>
           <button class="wide" id="btn-reset">清空当前页</button>

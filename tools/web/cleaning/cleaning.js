@@ -67,6 +67,7 @@ function resetWorkspace() {
   state.taskStatus = new Map();
   $("#pack-status").textContent = "等待导入 EPUB";
   $("#epub-path").value = "";
+  $("#reference-epub-path").value = "";
   setProgress(0, 0, "等待开始");
   renderTasks();
   $("#asset-list").replaceChildren(el("div", "empty", "导入 EPUB 后显示图片"));
@@ -80,24 +81,35 @@ async function autoClean() {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+  const referenceEpubPaths = $("#reference-epub-path").value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   if (!epubPaths.length) throw new Error("请填写 EPUB 路径。");
   resetForRun();
   banner("正在导入 EPUB 并生成章节任务…", true);
   setProgress(0, epubPaths.length, `导入 EPUB 1/${epubPaths.length}`);
-  const r = await api("/api/cleaning/auto-start", "POST", { epub_paths: epubPaths });
+  const r = await api("/api/cleaning/auto-start", "POST", {
+    epub_paths: epubPaths,
+    reference_epub_paths: referenceEpubPaths,
+  });
   const summary = r.import_summary || r.imported || {};
   state.activeBookpack = true;
   state.tasks = r.prepared?.tasks || [];
   state.tasks.forEach((task) => state.taskStatus.set(task.file, "pending"));
   banner("");
-  toast(`导入完成：${summary.epub_count || 1} 本，${summary.chapter_count || 0} 章，${summary.block_count || 0} blocks，${summary.image_count || 0} 图`);
+  const refSummary = r.reference_import_summary;
+  const refText = refSummary?.epub_count ? `；原文 ${refSummary.epub_count} 本已挂入` : "";
+  toast(`导入完成：${summary.epub_count || 1} 本，${summary.chapter_count || 0} 章，${summary.block_count || 0} blocks，${summary.image_count || 0} 图${refText}`);
   await loadState();
   renderTasks();
   await loadAssets();
   renderOutput({
     parsed: {
       suggestions: [],
-      summary: `validation=${summary.validation_status || r.imported?.validation?.status || "unknown"}，开始逐章清洗`,
+      summary:
+        `validation=${summary.validation_status || r.imported?.validation?.status || "unknown"}，开始逐章清洗` +
+        (refSummary?.epub_count ? `；对照原文已导入到 ${refSummary.reference_dir}` : ""),
     },
   });
   await runAllTasks();

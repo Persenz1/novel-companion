@@ -75,6 +75,7 @@ textarea.text-input {
   border: 1px solid var(--line); border-radius: 7px; background: #fff;
 }
 textarea.epub-input { min-height: 118px; font-family: ui-monospace, monospace; }
+textarea.epub-input.small { min-height: 86px; }
 .wide { width: 100%; margin-top: 6px; }
 .checkline { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; margin: 2px 0 10px; }
 

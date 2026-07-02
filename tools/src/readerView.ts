@@ -103,6 +103,7 @@ export function buildReaderBook(store: FileStore): Rec {
   return {
     pack_name: manifest.pack_name,
     series: manifest.series,
+    volumes: manifest.volumes.map((v) => ({ id: v.id, title: v.title })),
     has_ja: jaByBlock.size > 0,
     has_speakers: speakersByBlock.size > 0,
     sections,
