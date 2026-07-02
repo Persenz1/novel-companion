@@ -92,6 +92,34 @@ function slugId(value: string): string {
     .toLowerCase() || "imported_series";
 }
 
+function epubPathsFromBody(body: Rec): string[] {
+  const raw = Array.isArray(body.epub_paths) ? body.epub_paths : [body.epub_path];
+  return raw
+    .flatMap((value) => String(value ?? "").split(/\r?\n/))
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function volumeIdForEpub(epubPath: string, index: number): string {
+  const stem = path.basename(epubPath, path.extname(epubPath));
+  const m = /(?:^|[-_\s.])(v\d{1,3})(?:[-_\s.]|$)/i.exec(stem);
+  if (m) return normalizeVolumeId(m[1]!);
+  return `v${String(index + 1).padStart(2, "0")}`;
+}
+
+function normalizeVolumeId(value: string): string {
+  const m = /^v0*(\d+)$/i.exec(value);
+  if (!m) return value;
+  return `v${String(Number(m[1])).padStart(2, "0")}`;
+}
+
+function batchStem(epubPaths: string[]): string {
+  const first = path.basename(epubPaths[0]!, path.extname(epubPaths[0]!));
+  if (epubPaths.length === 1) return first;
+  const trimmed = first.replace(/[-_\s.]*v\d{1,3}$/i, "").replace(/[-_\s.]+$/g, "");
+  return trimmed || first;
+}
+
 function serveStatic(res: http.ServerResponse, urlPath: string): void {
   // "/" -> 工作台首页；"/reader/" -> 阅读器首页（其静态资源在 web/reader/ 下，用相对路径）。
   let rel: string;
@@ -118,6 +146,148 @@ function mergeModel(old: ModelConfig, patch: Partial<ModelConfig> | undefined): 
     base_url: patch.base_url ?? old.base_url,
     model: patch.model ?? old.model,
     api_key: patch.api_key && patch.api_key.length > 0 ? patch.api_key : old.api_key,
+  };
+}
+
+interface UsageBucket {
+  key: string;
+  label: string;
+  source: string;
+  calls: number;
+  prompt_tokens: number;
+  prompt_cache_hit_tokens: number;
+  prompt_cache_miss_tokens: number;
+  prompt_uncategorized_tokens: number;
+  completion_tokens: number;
+  reasoning_tokens: number;
+  visible_output_tokens: number;
+  total_tokens: number;
+  image_tokens: number;
+  prompt_cache_hit_ratio: number | null;
+}
+
+function emptyUsageBucket(key: string, label: string, source: string): UsageBucket {
+  return {
+    key,
+    label,
+    source,
+    calls: 0,
+    prompt_tokens: 0,
+    prompt_cache_hit_tokens: 0,
+    prompt_cache_miss_tokens: 0,
+    prompt_uncategorized_tokens: 0,
+    completion_tokens: 0,
+    reasoning_tokens: 0,
+    visible_output_tokens: 0,
+    total_tokens: 0,
+    image_tokens: 0,
+    prompt_cache_hit_ratio: null,
+  };
+}
+
+function num(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function usageReasoningTokens(usage: Rec): number {
+  return num(usage.reasoning_tokens) || num((usage.completion_tokens_details as Rec | undefined)?.reasoning_tokens);
+}
+
+function usageImageTokens(usage: Rec): number {
+  return num(usage.image_tokens) || num((usage.prompt_tokens_details as Rec | undefined)?.image_tokens);
+}
+
+function addUsage(bucket: UsageBucket, usage: Rec | null | undefined): void {
+  if (!usage) return;
+  const prompt = num(usage.prompt_tokens);
+  const hit = num(usage.prompt_cache_hit_tokens);
+  const miss = num(usage.prompt_cache_miss_tokens);
+  const completion = num(usage.completion_tokens);
+  const reasoning = usageReasoningTokens(usage);
+
+  bucket.calls += 1;
+  bucket.prompt_tokens += prompt;
+  bucket.prompt_cache_hit_tokens += hit;
+  bucket.prompt_cache_miss_tokens += miss;
+  bucket.prompt_uncategorized_tokens += hit || miss ? Math.max(0, prompt - hit - miss) : prompt;
+  bucket.completion_tokens += completion;
+  bucket.reasoning_tokens += reasoning;
+  bucket.visible_output_tokens += Math.max(0, completion - reasoning);
+  bucket.total_tokens += num(usage.total_tokens) || prompt + completion;
+  bucket.image_tokens += usageImageTokens(usage);
+}
+
+function finalizeUsage(bucket: UsageBucket): UsageBucket {
+  const denom = bucket.prompt_cache_hit_tokens + bucket.prompt_cache_miss_tokens;
+  bucket.prompt_cache_hit_ratio = denom > 0 ? Number((bucket.prompt_cache_hit_tokens / denom).toFixed(4)) : null;
+  return bucket;
+}
+
+function aggregateUsage(store: FileStore): Rec {
+  const total = emptyUsageBucket("total", "总计", "all");
+  const buckets = new Map<string, UsageBucket>();
+  const recent: Rec[] = [];
+
+  const bucketFor = (key: string, label: string, source: string): UsageBucket => {
+    const found = buckets.get(key);
+    if (found) return found;
+    const created = emptyUsageBucket(key, label, source);
+    buckets.set(key, created);
+    return created;
+  };
+  const record = (bucket: UsageBucket, usage: Rec | null | undefined, detail: Rec): void => {
+    if (!usage) return;
+    addUsage(total, usage);
+    addUsage(bucket, usage);
+    recent.push({
+      ...detail,
+      prompt_tokens: num(usage.prompt_tokens),
+      prompt_cache_hit_tokens: num(usage.prompt_cache_hit_tokens),
+      prompt_cache_miss_tokens: num(usage.prompt_cache_miss_tokens),
+      completion_tokens: num(usage.completion_tokens),
+      reasoning_tokens: usageReasoningTokens(usage),
+      total_tokens: num(usage.total_tokens),
+      image_tokens: usageImageTokens(usage),
+    });
+  };
+
+  for (const run of store.readJsonl<Rec>("reports/work_runs.jsonl").rows) {
+    const stage = String(run.stage ?? "agent");
+    const model = String(run.reviewer_model ?? run.drafter_model ?? "");
+    const label = stage === "draft" ? "起草" : stage === "review" ? "复核" : stage;
+    const modelLabel = model || "unknown-model";
+    record(bucketFor(`agent:${stage}:${modelLabel}`, `${label} · ${modelLabel}`, "agent"), run.token_usage as Rec | undefined, {
+      source: "agent",
+      stage,
+      model,
+      chapter_id: run.chapter_id,
+      created_at: run.created_at,
+    });
+  }
+
+  for (const file of store.listDir("reports/cleaning_mimo_outputs").filter((name) => name.endsWith(".json")).sort()) {
+    try {
+      const out = store.readJson<Rec>(`reports/cleaning_mimo_outputs/${file}`);
+      const model = String(out.model ?? "unknown-model");
+      record(bucketFor(`cleaning:mimo:${model}`, `清洗 · ${model}`, "cleaning"), out.usage as Rec | undefined, {
+        source: "cleaning",
+        stage: "mimo_cleaning",
+        model,
+        chapter_id: out.chapter_id,
+        file,
+        suggestion_count: Array.isArray((out.parsed as Rec | undefined)?.suggestions)
+          ? ((out.parsed as Rec).suggestions as unknown[]).length
+          : 0,
+      });
+    } catch {
+      /* Ignore malformed historical output files; validator handles bookpack correctness. */
+    }
+  }
+
+  return {
+    total: finalizeUsage(total),
+    buckets: [...buckets.values()].map(finalizeUsage),
+    recent: recent.slice(-40).reverse(),
   };
 }
 
@@ -157,6 +327,10 @@ async function handleApi(
   if (pathname === "/api/chapters" && method === "GET") {
     const data = new WorkbenchData(openBookpack(cfg));
     return sendJson(res, 200, { chapters: data.chapters() });
+  }
+
+  if (pathname === "/api/usage" && method === "GET") {
+    return sendJson(res, 200, aggregateUsage(openBookpack(cfg)));
   }
 
   // 阅读器视图（与工作台共用同一 bookpack 配置）：按阅读顺序展开的中日双语正文。
@@ -303,25 +477,40 @@ async function handleApi(
   // ---- 清洗·图片标注（Phase 1）----
   if (pathname === "/api/cleaning/auto-start" && method === "POST") {
     const body = await readBody(req);
-    const epubPath = String(body.epub_path ?? "").trim();
-    if (!epubPath) return sendJson(res, 400, { error: "epub_path 必填。" });
-    const stem = path.basename(epubPath, path.extname(epubPath));
+    const epubPaths = epubPathsFromBody(body);
+    if (epubPaths.length === 0) return sendJson(res, 400, { error: "epub_path 必填。" });
+    const stem = batchStem(epubPaths);
     const id = slugId(stem);
     const targetDir = path.join("/tmp/novel-companion-cleaning", id);
-    const imported = importEpubToBookpack(epubPath, targetDir, {
-      volumeId: "v01",
-      seriesId: id,
-      packId: `${id}_project_v1`,
-      packName: stem,
-      force: true,
-      parseAndValidate: true,
-    });
+    const imports = epubPaths.map((epubPath, idx) =>
+      importEpubToBookpack(epubPath, targetDir, {
+        volumeId: volumeIdForEpub(epubPath, idx),
+        seriesId: id,
+        packId: `${id}_project_v1`,
+        packName: stem,
+        force: idx === 0,
+        append: idx > 0,
+        parseAndValidate: true,
+      }),
+    );
     const next = { ...cfg, bookpack_dir: targetDir };
     saveConfig(next);
     const store = new FileStore(targetDir);
-    const prepared = prepareMimoCleaningInputs(store, "v01");
+    const prepared = prepareMimoCleaningInputs(store);
+    const chapterCount = imports.reduce((n, item) => n + item.chapter_count, 0);
+    const blockCount = imports.reduce((n, item) => n + item.block_count, 0);
+    const imageCount = imports.reduce((n, item) => n + item.image_count, 0);
     return sendJson(res, 200, {
-      imported,
+      imported: imports[imports.length - 1],
+      imports,
+      import_summary: {
+        epub_count: imports.length,
+        volume_ids: imports.flatMap((item) => item.volume_ids),
+        chapter_count: chapterCount,
+        block_count: blockCount,
+        image_count: imageCount,
+        validation_status: imports[imports.length - 1]?.validation?.status ?? "unknown",
+      },
       prepared,
       target_dir: targetDir,
       config: redactConfig(next),
@@ -339,6 +528,7 @@ async function handleApi(
       packId: typeof body.pack_id === "string" && body.pack_id ? body.pack_id : undefined,
       packName: typeof body.pack_name === "string" && body.pack_name ? body.pack_name : undefined,
       force: body.force === true,
+      append: body.append === true,
       parseAndValidate: true,
     });
     const next = { ...cfg, bookpack_dir: targetDir };

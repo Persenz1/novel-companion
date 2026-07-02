@@ -4,7 +4,7 @@
 
 当前工具链覆盖解析器、校验器、测试夹具、编译器、查询器、EPUB 清洗最小可用版本，以及清洗后制作阶段的数据工作台（`npm run workbench`）。工作台按 `docs/modules/ai-workbench.md` 实现：AI 起草 + 独立 AI 复核自动落盘 + 人审计异常。
 
-状态边界：工作台、最低限度阅读器界面和 `/cleaning/` 一键清洗最小可用版本已实现；gray-tower 4 卷 DeepSeek A 阶段长程压力已跑通。仓库自动测试不调用模型、不需要 API 密钥；真实（版权）书籍长程制作、多卷 EPUB 清洗、DeepSeek 缓存成本优化，以及 B 阶段前卷上下文压缩 / 检索仍未完成。
+状态边界：工作台、最低限度阅读器界面和 `/cleaning/` 一键清洗已实现；gray-tower 4 卷 DeepSeek A 阶段长程压力已跑通。仓库自动测试不调用模型、不需要 API 密钥；真实（版权）书籍长程制作、复杂 EPUB 兼容性、DeepSeek 缓存成本优化，以及 B 阶段前卷上下文压缩 / 检索仍未完成。
 
 ## 环境
 
@@ -76,16 +76,18 @@ npm run workbench
 # 浏览器打开 /cleaning/
 ```
 
-当前界面只要求填 EPUB 路径。系统会自动导入到 `/tmp/novel-companion-cleaning/{epub-stem}`，解析 + 校验，生成 MiMo 章节任务，并逐章调用视觉模型展示清洗建议。受控测试夹具可用以下命令复现：
+当前界面支持填一个或多个 EPUB 路径；多本时一行一本，系统会自动导入到 `/tmp/novel-companion-cleaning/{epub-stem}`，解析 + 校验，生成全书 MiMo 章节任务，并逐章调用视觉模型展示清洗建议。受控测试夹具可用以下命令复现：
 
 ```bash
 npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v01.epub v01
-npx tsx src/cli.ts import-epub /tmp/gray-tower-v01.epub /tmp/gray-tower-imported --force
-npx tsx src/cli.ts prepare-mimo /tmp/gray-tower-imported v01
+npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v02.epub v02
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v01.epub /tmp/gray-tower-imported --volume-id v01 --force
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v02.epub /tmp/gray-tower-imported --volume-id v02 --append
+npx tsx src/cli.ts prepare-mimo /tmp/gray-tower-imported
 npx tsx src/cli.ts run-mimo-cleaning /tmp/gray-tower-imported reports/cleaning_mimo_inputs/v01.c01.json
 ```
 
-当前限制：自动导入仍按单卷 `v01`；MiMo 通用建议只写报告和界面展示，尚未批量安全写回 Markdown / manifest。
+当前限制：MiMo 通用建议只写报告和界面展示，尚未批量安全写回 Markdown / manifest；真实 EPUB 的复杂目录、脚注和跨文件章节合并仍需增强。
 
 ## 阅读器（只读，防剧透 + 中日双语）
 
@@ -114,7 +116,7 @@ npx tsx scripts/long-range-phase-a.ts --run-model --work /tmp/gt-longrange-4vol 
 
 ## 待实现
 
-真实书籍长程压测、多卷 EPUB 清洗、DeepSeek 缓存成本优化、批量合并同名实体、B 阶段跨卷前文上下文的梗概 / 预算器 / 可选 RAG、`AgentStore` 的更新 / 合并 / 废弃完整回滚语义。
+真实书籍长程压测、复杂 EPUB 兼容性、DeepSeek 缓存成本优化、批量合并同名实体、B 阶段跨卷前文上下文的梗概 / 预算器 / 可选 RAG、`AgentStore` 的更新 / 合并 / 废弃完整回滚语义。
 
 ## 开发
 

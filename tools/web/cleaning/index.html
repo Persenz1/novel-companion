@@ -20,7 +20,7 @@
           <h2>自动清洗</h2>
           <label class="field">
             <span>EPUB 路径</span>
-            <input type="text" id="epub-path" placeholder="/tmp/gray-tower-v01.epub" />
+            <textarea id="epub-path" class="text-input epub-input" placeholder="/tmp/gray-tower-v01.epub&#10;/tmp/gray-tower-v02.epub&#10;/tmp/gray-tower-v03.epub&#10;/tmp/gray-tower-v04.epub"></textarea>
           </label>
           <button class="primary wide" id="btn-auto-clean">开始自动清洗</button>
           <button class="wide" id="btn-reset">清空当前页</button>
@@ -61,9 +61,11 @@
         <div class="tabs">
           <button class="tab active" data-tab="suggestions">清洗建议</button>
           <button class="tab" data-tab="raw">原始输出</button>
+          <button class="tab" data-tab="usage">用量</button>
         </div>
         <div class="tab-body" id="tab-suggestions"></div>
         <div class="tab-body" id="tab-raw" hidden></div>
+        <div class="tab-body" id="tab-usage" hidden></div>
       </aside>
     </main>
 

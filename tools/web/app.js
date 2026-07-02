@@ -301,6 +301,96 @@ function showBanner(text, active = false) {
   b.classList.toggle("active", Boolean(text) && active);
 }
 
+// ---------- 用量 / 缓存 ----------
+
+function fmtNum(n) {
+  return Number(n || 0).toLocaleString("zh-CN");
+}
+
+function fmtPct(v) {
+  return v == null ? "—" : `${(Number(v) * 100).toFixed(1)}%`;
+}
+
+async function loadUsage() {
+  const body = $("#tab-usage");
+  body.replaceChildren(el("div", "empty", "加载中…"));
+  try {
+    const usage = await api("/api/usage");
+    renderUsage(body, usage);
+  } catch (err) {
+    body.replaceChildren(el("div", "empty", err.message));
+  }
+}
+
+function renderUsage(body, usage) {
+  body.replaceChildren();
+  body.appendChild(usageSummary(usage.total));
+  const buckets = el("div", "usage-buckets");
+  for (const b of usage.buckets || []) buckets.appendChild(usageBucket(b));
+  body.appendChild(buckets);
+  const recent = el("div", "usage-recent");
+  recent.appendChild(el("h3", null, "最近调用"));
+  if (!usage.recent?.length) {
+    recent.appendChild(el("div", "empty", "暂无模型用量记录"));
+  } else {
+    for (const r of usage.recent) recent.appendChild(usageRecentRow(r));
+  }
+  body.appendChild(recent);
+}
+
+function usageSummary(u) {
+  const card = el("div", "usage-summary");
+  card.append(
+    usageMetric("调用", fmtNum(u.calls)),
+    usageMetric("输入", fmtNum(u.prompt_tokens)),
+    usageMetric("命中", fmtNum(u.prompt_cache_hit_tokens)),
+    usageMetric("未命中", fmtNum(u.prompt_cache_miss_tokens)),
+    usageMetric("输出", fmtNum(u.completion_tokens)),
+    usageMetric("推理", fmtNum(u.reasoning_tokens)),
+    usageMetric("缓存率", fmtPct(u.prompt_cache_hit_ratio)),
+  );
+  return card;
+}
+
+function usageMetric(label, value) {
+  const box = el("div", "usage-metric");
+  box.append(el("span", "usage-label", label), el("strong", null, value));
+  return box;
+}
+
+function usageBucket(b) {
+  const card = el("div", "usage-bucket");
+  card.appendChild(el("div", "usage-bucket-title", `${b.label} · ${b.calls} 次`));
+  card.appendChild(
+    el(
+      "div",
+      "usage-line",
+      `输入 ${fmtNum(b.prompt_tokens)} / 命中 ${fmtNum(b.prompt_cache_hit_tokens)} / 未命中 ${fmtNum(b.prompt_cache_miss_tokens)} / 缓存率 ${fmtPct(b.prompt_cache_hit_ratio)}`,
+    ),
+  );
+  card.appendChild(
+    el(
+      "div",
+      "usage-line",
+      `输出 ${fmtNum(b.completion_tokens)} / 可见输出 ${fmtNum(b.visible_output_tokens)} / 推理 ${fmtNum(b.reasoning_tokens)} / 图片 ${fmtNum(b.image_tokens)}`,
+    ),
+  );
+  return card;
+}
+
+function usageRecentRow(r) {
+  const row = el("div", "usage-row");
+  row.appendChild(el("div", "usage-row-title", `${r.source} · ${r.stage} · ${r.chapter_id || r.file || ""}`));
+  row.appendChild(
+    el(
+      "div",
+      "usage-line",
+      `输入 ${fmtNum(r.prompt_tokens)}（命中 ${fmtNum(r.prompt_cache_hit_tokens)} / 未命中 ${fmtNum(r.prompt_cache_miss_tokens)}） · 输出 ${fmtNum(r.completion_tokens)} · 推理 ${fmtNum(r.reasoning_tokens)} · 总计 ${fmtNum(r.total_tokens)}`,
+    ),
+  );
+  return row;
+}
+
 // ---------- 右栏：异常队列 ----------
 
 const queueSelection = new Set();
@@ -487,8 +577,10 @@ function switchTab(name) {
   $("#tab-markers").hidden = name !== "markers";
   $("#tab-queue").hidden = name !== "queue";
   $("#tab-audit").hidden = name !== "audit";
+  $("#tab-usage").hidden = name !== "usage";
   if (name === "queue") loadQueue();
   if (name === "audit") loadAudit();
+  if (name === "usage") loadUsage();
 }
 
 function mkBtn(text, cls, fn) {

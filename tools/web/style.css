@@ -74,6 +74,7 @@ textarea.text-input {
   width: 100%; min-height: 64px; resize: vertical; font: inherit; padding: 7px 9px; margin-bottom: 7px;
   border: 1px solid var(--line); border-radius: 7px; background: #fff;
 }
+textarea.epub-input { min-height: 118px; font-family: ui-monospace, monospace; }
 .wide { width: 100%; margin-top: 6px; }
 .checkline { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; margin: 2px 0 10px; }
 
@@ -193,6 +194,21 @@ textarea.text-input {
   white-space: pre-wrap; word-break: break-word; background: #fff; border: 1px solid var(--line);
   border-radius: 8px; padding: 10px; margin: 0; max-height: calc(100vh - 150px); overflow: auto; font-size: 12px;
 }
+.usage-summary {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px;
+}
+.usage-metric {
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 9px 10px;
+}
+.usage-label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 3px; }
+.usage-metric strong { font-size: 16px; }
+.usage-buckets, .usage-recent { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.usage-recent h3 { font-size: 13px; margin: 6px 0 0; }
+.usage-bucket, .usage-row {
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 9px 10px;
+}
+.usage-bucket-title, .usage-row-title { font-weight: 600; margin-bottom: 5px; }
+.usage-line { color: var(--muted); font-size: 12px; line-height: 1.55; }
 .asset-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;
 }

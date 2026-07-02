@@ -6,6 +6,8 @@ import type { ModelConfig } from "../agent/config.js";
 import { isModelReady, type WorkbenchConfig } from "../agent/config.js";
 
 type Rec = Record<string, unknown>;
+const MIMO_CLEANING_OPTIONS = { maxCompletionTokens: 8192, jsonMode: true, thinking: "enabled" } as const;
+const MIMO_REPAIR_OPTIONS = { maxCompletionTokens: 4096, jsonMode: true, thinking: "enabled" } as const;
 
 interface ImageRefPart {
   type: "image_ref";
@@ -61,11 +63,7 @@ export async function runMimoCleaningTask(
     ...((task.blocks ?? []).map((block) => block.id)),
     ...((task.local_images ?? []).map((image) => image.asset_id)),
   ]);
-  const result = await chat(cfg.vision, messages, {
-    maxCompletionTokens: 2048,
-    jsonMode: true,
-    thinking: "disabled",
-  });
+  const result = await chat(cfg.vision, messages, MIMO_CLEANING_OPTIONS);
   let parsed: Rec;
   try {
     parsed = await parseCleaningJson(cfg.vision, result.text, allowedTargets);
@@ -76,6 +74,7 @@ export async function runMimoCleaningTask(
       task_id: task.task_id,
       chapter_id: task.chapter.id,
       model: result.model,
+      request_options: MIMO_CLEANING_OPTIONS,
       usage: result.usage ?? null,
       raw_text: result.text,
       parse_error: (err as Error).message,
@@ -90,6 +89,7 @@ export async function runMimoCleaningTask(
     task_id: task.task_id,
     chapter_id: task.chapter.id,
     model: result.model,
+    request_options: MIMO_CLEANING_OPTIONS,
     usage: result.usage ?? null,
     raw_text: result.text,
     parsed,
@@ -127,7 +127,7 @@ async function parseCleaningJson(model: ModelConfig, text: string, allowedTarget
             text,
         },
       ],
-      { maxCompletionTokens: 1200, jsonMode: true, thinking: "disabled" },
+      MIMO_REPAIR_OPTIONS,
     );
     return normalizeCleaningOutput(extractJson<Rec>(repaired.text), allowedTargets);
   }

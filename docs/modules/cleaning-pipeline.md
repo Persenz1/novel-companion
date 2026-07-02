@@ -41,7 +41,7 @@ HTTP / UI：
 ```text
 EPUB 路径
 -> /tmp/novel-companion-cleaning/{epub-stem}
--> import-epub 写 manifest + parsed/volumes/v01.md + assets/images
+-> import-epub 写 manifest + parsed/volumes/{volume}.md + assets/images
 -> Parser.parseBookpack()
 -> Validator.validateBookpack()
 -> prepare-mimo 生成每章任务包
@@ -50,7 +50,7 @@ EPUB 路径
 -> 前端展示章节进度和建议
 ```
 
-界面现在只要求用户填 EPUB 路径。`series_id`、`pack_id`、目标目录和 `volume_id=v01` 由系统自动生成。失败章节会标红并继续后续章节，便于定位模型或 EPUB 问题。
+界面现在支持填写一个或多个 EPUB 路径；多个单卷 EPUB 按“一行一本”提交，系统会按文件名里的 `v01` / `v02` 等卷号或输入顺序导入到同一个 bookpack。`series_id`、`pack_id` 和目标目录由系统自动生成。失败章节会标红并继续后续章节，便于定位模型或 EPUB 问题。
 
 ## 反向 EPUB Fixture
 
@@ -59,9 +59,12 @@ EPUB 路径
 ```bash
 cd tools
 npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v01.epub v01
+npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v02.epub v02
+npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v03.epub v03
+npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v04.epub v04
 ```
 
-该命令从已清洗的 bookpack 反向生成标准 EPUB 3：
+这些命令从已清洗的 bookpack 反向生成每卷一个标准 EPUB 3：
 
 - `mimetype`
 - `META-INF/container.xml`
@@ -74,13 +77,24 @@ npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v01.epub v0
 
 ## EPUB Import MVP
 
-命令：
+单卷导入命令：
 
 ```bash
 cd tools
 npx tsx src/cli.ts import-epub /tmp/gray-tower-v01.epub /tmp/gray-tower-imported \
+  --volume-id v01 \
   --series-id gray_tower_imported \
-  --pack-id gray_tower_imported_project_v1
+  --pack-id gray_tower_imported_project_v1 \
+  --force
+```
+
+多卷模拟测试使用多个单卷 EPUB 追加到同一个 bookpack：
+
+```bash
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v01.epub /tmp/gray-tower-imported --volume-id v01 --force
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v02.epub /tmp/gray-tower-imported --volume-id v02 --append
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v03.epub /tmp/gray-tower-imported --volume-id v03 --append
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v04.epub /tmp/gray-tower-imported --volume-id v04 --append
 ```
 
 当前实现：
@@ -90,13 +104,14 @@ npx tsx src/cli.ts import-epub /tmp/gray-tower-v01.epub /tmp/gray-tower-imported
 - 解析 `.opf` 的 manifest / spine。
 - 按 spine 顺序读取 XHTML。
 - 抽取 `h1`、`p`、`hr`、`figure/img`。
-- 生成 `manifest.json`、`parsed/volumes/v01.md`、`assets/images/*`。
+- 生成或追加 `manifest.json`、`parsed/volumes/{volume}.md`、`assets/images/*`。
 - 默认执行 `Parser.parseBookpack()` 和 `Validator.validateBookpack()`。
 
 受控 fixture 验证结果：
 
-- `chapters=5`
-- `blocks=41`
+- `volumes=4`
+- `chapters=25`
+- `blocks=181`
 - `images=5`
 - `validation=passed`
 
@@ -129,7 +144,7 @@ reports/cleaning_mimo_outputs/{task_id}.json
 
 - 不打印 API key。
 - 使用 `jsonMode: true`。
-- 使用 `thinking: "disabled"`，避免推理 token 吃掉输出预算。
+- 使用 `thinking: "enabled"`，只读取最终 `content`，不展示、不写入 `reasoning_content`。
 - 空输出不做幻觉式 JSON 修复。
 - 过滤无效 target，避免模型编造 asset/block ID。
 
@@ -154,7 +169,7 @@ reports/cleaning_mimo_outputs/{task_id}.json
 
 ## 未完成
 
-- 多卷 EPUB：当前自动导入按 `v01` 写入，尚未根据 EPUB 目录 / 标题 / 用户规则拆成 `v01`、`v02`。
+- 多卷真实 EPUB：受控测试路径已支持多个单卷 EPUB append 汇入同一 bookpack；真实 EPUB 内部目录 / 标题 / 用户规则拆卷仍需增强。
 - 真实 EPUB 兼容性：脚注、诗歌、短信体、表格、跨文件章节合并、异常 nav/ncx、非正文广告页等尚未系统测试。
 - 通用建议写回：MiMo 的 `suggestions[]` 当前只入报告和界面展示；还没有通用应用器把低风险建议安全写回 Markdown / manifest。
 - 人工确认队列：高风险清洗建议还没有独立队列，不能像 review item 那样批量裁决。
@@ -163,8 +178,8 @@ reports/cleaning_mimo_outputs/{task_id}.json
 
 ## 下一轮验收
 
-1. 准备一个多卷 EPUB fixture，优先用 `gray-tower` 反向合成。
-2. `/cleaning/` 一键导入，确认 manifest 能表达多卷。
+1. 准备多个单卷 EPUB fixture，优先用 `gray-tower` 反向合成。
+2. `/cleaning/` 多行路径一键导入，确认 manifest 能表达多卷。
 3. 每卷 parse + validate 通过。
 4. 每章生成 MiMo 任务并能展示进度。
 5. 明确 `suggestions[]` 的哪些类型可自动写回，哪些必须进人工确认。

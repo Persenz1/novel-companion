@@ -6,12 +6,12 @@
 
 **原始问题**：早期测试的默认起点是「已经清洗好、已切好 block 的 Markdown + 图片」（即 `samples/gray-tower` 那种 bookpack）。这不该是最终起点——否则用户得先在系统外把书洗好、切好 block，体验不完整。
 
-**当前进展**：已经有 EPUB importer、MiMo 任务包、MiMo headless 调用和 `/cleaning/` 一键清洗 MVP。用户侧已经可以只填 EPUB 路径开始清洗；当前仍按单卷 `v01` 导入，MiMo 建议主要写报告和界面展示，尚未做通用写回。
+**当前进展**：已经有 EPUB importer、MiMo 任务包、MiMo headless 调用和 `/cleaning/` 一键清洗入口。用户侧可以填写一个或多个 EPUB 路径开始清洗；多个单卷 EPUB 会汇入同一 bookpack。MiMo 建议主要写报告和界面展示，尚未做通用写回。
 
 **目标流程**：用户直接投喂**一整本 EPUB**，由 MiMo（或其他多模态大模型）在系统内完成清洗（结构切分、block 划分、图片锚点与图注等）。
 
 **剩余障碍**：
-- 多卷 EPUB 拆分：从目录 / 标题 / spine 识别 `v01`、`v02` 等卷。
+- 真实多卷 EPUB 拆分：从目录 / 标题 / spine 识别 `v01`、`v02` 等卷；受控多单卷 EPUB append 路径已可用。
 - 真实 EPUB 兼容性：脚注、跨文件章节、异常目录、广告页、复杂排版。
 - 清洗建议写回：把低风险建议安全应用到 manifest / Markdown / assets，高风险建议进入人工确认。
 - 和后处理统一：清洗后起草 / 复核也应从“整本书输入，内部按卷/章处理”的口径推进。

@@ -63,12 +63,12 @@ EPUB / 已清洗 Markdown
 ## 6. 未完成核心需求
 
 - 真实（版权）书籍长程制作与长程阅读压测。
-- 多卷 EPUB 解包、清洗和导入；当前 EPUB importer MVP 先按 `v01` 写入。
+- 多卷 / 多本 EPUB 清洗的真实书籍兼容性；受控 gray-tower 多个单卷 EPUB 已可 append 导入同一 bookpack。
 - 第二卷及后续卷的前文上下文压缩 / 检索——Phase A 暂不阻塞 gray-tower 四卷主线；Phase B 可作为真实书或质量 / 成本对照增强，测试执行手册见 `modules/long-range-test.md`。
 - DeepSeek cache 命中率与整本书制作成本优化。
 - 批量合并同名实体 / 同义实体的专用入口。
 - `AgentStore` 对 update / merge / deprecate 的完整 before 快照和恢复语义。
 - LLM 输出的通用 schema-level 修复、重试和脱敏验收记录。
-- **清洗真正起点：整本 EPUB → 多模态清洗**已经有受控 fixture 和一键 MVP，但真实书籍、多卷结构、AI 建议写回和人工确认队列还没完成。以此为准，覆盖旧的「外部 Codex/GPT 清洗」设想。详见 `modules/cleaning-pipeline.md`。
+- **清洗真正起点：EPUB → 多模态清洗**已经有受控 fixture 和一键入口；多个单卷 EPUB 可汇入同一 bookpack。真实书籍复杂结构、AI 建议写回和人工确认队列还没完成。以此为准，覆盖旧的「外部 Codex/GPT 清洗」设想。详见 `modules/cleaning-pipeline.md`。
 - **已确认 block 右栏看不到增强信息**：先不当 bug 修，需先与用户对齐「右栏显示什么」。同上 §2。
 - **AI 提取型增强交互**（人物信息卡 / 角色事件时间线 / 关系等，从已洗数据提取）：不急，系统跑通后做，但**显示接口现在就预留**。同上 §3。

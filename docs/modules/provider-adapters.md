@@ -40,9 +40,11 @@ model: string;
 
 当前策略：
 
-- 起草 / 复核属于结构化抽取，默认 `jsonMode: true` + `thinking: "disabled"`。
+- 起草 / 复核属于结构化抽取，默认 `jsonMode: true` + `thinking: "enabled"` + `reasoning_effort: "high"`。
+- 应用层只读取最终 `message.content`，不展示、不写入 `reasoning_content`；推理 token 仍由供应商计入用量。
 - 起草 / 复核 `maxTokens: 8192`，避免候选 JSON 截断。
-- `work_runs.token_usage` 记录 DeepSeek cache hit/miss 和 `prompt_cache_hit_ratio`，便于后续成本排查。
+- `work_runs.token_usage` 记录 DeepSeek cache hit/miss、`prompt_cache_hit_ratio` 和供应商返回的 `reasoning_tokens`，便于后续成本排查。
+- 工作台 `/api/usage` 会聚合 `reports/work_runs.jsonl` 和 `reports/cleaning_mimo_outputs/*.json`，展示输入、缓存命中 / 未命中、输出、推理、图片 token；当前不硬编码供应商价格。
 
 ## MiMo
 
@@ -50,8 +52,10 @@ model: string;
 
 - 鉴权头使用 `api-key`。
 - 图文输入走 OpenAI-compatible `image_url`，本地图片转 base64 data URI。
-- 清洗建议和图片标注都使用 `jsonMode: true` + `thinking: "disabled"`。
-- 清洗建议 `maxCompletionTokens: 2048`；关闭 thinking 后实测 `reasoning_tokens=0`，不再被推理过程吞完输出预算。
+- 清洗建议和图片标注都使用 `jsonMode: true` + `thinking: "enabled"`。
+- 应用层只读取最终 `content`，不展示、不写入 `reasoning_content`；推理 token 仍由 MiMo 计入 completion token。
+- 清洗建议 `maxCompletionTokens: 8192`，给推理和最终 JSON 留足空间。
+- 清洗输出文件保留供应商 `usage` 原文，`/api/usage` 会把 `prompt_tokens_details.image_tokens` 和 `completion_tokens_details.reasoning_tokens` 聚合到计费器。
 
 ## 后续供应商接入
 

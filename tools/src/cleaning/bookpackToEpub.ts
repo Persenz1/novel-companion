@@ -168,7 +168,7 @@ function buildEpubEntries(store: FileStore, manifest: Manifest, volumes: VolumeE
       spineItems.push({ id: itemId, href, title: chapter.title });
       entries.push({
         name: `OEBPS/${href}`,
-        data: xml(chapterXhtml(chapter, imageEntries)),
+        data: xml(chapterXhtml(volume.volume, chapter, imageEntries)),
       });
     }
   }
@@ -178,7 +178,7 @@ function buildEpubEntries(store: FileStore, manifest: Manifest, volumes: VolumeE
   return entries;
 }
 
-function chapterXhtml(chapter: MarkdownChapter, imageEntries: Map<string, string>): string {
+function chapterXhtml(volume: ManifestVolume, chapter: MarkdownChapter, imageEntries: Map<string, string>): string {
   const assetsByBlock = new Map<string, MarkdownAsset[]>();
   for (const asset of chapter.assets) {
     const list = assetsByBlock.get(asset.block) ?? [];
@@ -187,7 +187,7 @@ function chapterXhtml(chapter: MarkdownChapter, imageEntries: Map<string, string
   }
 
   const body: string[] = [
-    `<section epub:type="${escAttr(chapter.kind)}" data-nc-chapter-id="${escAttr(chapter.id)}">`,
+    `<section epub:type="${escAttr(chapter.kind)}" data-nc-volume-id="${escAttr(volume.id)}" data-nc-volume-title="${escAttr(volume.title)}" data-nc-chapter-id="${escAttr(chapter.id)}">`,
     `<h1>${esc(chapter.title)}</h1>`,
   ];
   for (const block of chapter.blocks) {

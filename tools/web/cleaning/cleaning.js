@@ -74,24 +74,28 @@ function resetWorkspace() {
 }
 
 async function autoClean() {
-  const epubPath = $("#epub-path").value.trim();
-  if (!epubPath) throw new Error("请填写 EPUB 路径。");
+  const epubPaths = $("#epub-path").value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!epubPaths.length) throw new Error("请填写 EPUB 路径。");
   resetForRun();
   banner("正在导入 EPUB 并生成章节任务…", true);
-  setProgress(0, 1, "导入 EPUB");
-  const r = await api("/api/cleaning/auto-start", "POST", { epub_path: epubPath });
+  setProgress(0, epubPaths.length, `导入 EPUB 1/${epubPaths.length}`);
+  const r = await api("/api/cleaning/auto-start", "POST", { epub_paths: epubPaths });
+  const summary = r.import_summary || r.imported || {};
   state.activeBookpack = true;
   state.tasks = r.prepared?.tasks || [];
   state.tasks.forEach((task) => state.taskStatus.set(task.file, "pending"));
   banner("");
-  toast(`导入完成：${r.imported.chapter_count} 章，${r.imported.block_count} blocks，${r.imported.image_count} 图`);
+  toast(`导入完成：${summary.epub_count || 1} 本，${summary.chapter_count || 0} 章，${summary.block_count || 0} blocks，${summary.image_count || 0} 图`);
   await loadState();
   renderTasks();
   await loadAssets();
   renderOutput({
     parsed: {
       suggestions: [],
-      summary: `validation=${r.imported.validation?.status || "unknown"}，开始逐章清洗`,
+      summary: `validation=${summary.validation_status || r.imported?.validation?.status || "unknown"}，开始逐章清洗`,
     },
   });
   await runAllTasks();
@@ -177,6 +181,7 @@ async function runAllTasks() {
       renderOutput(r.output);
       done += 1;
       setProgress(done, state.tasks.length, `已完成 ${done}/${state.tasks.length}`);
+      renderTasks();
     } catch (err) {
       state.taskStatus.set(task.file, "error");
       failed += 1;
@@ -191,12 +196,23 @@ async function runAllTasks() {
 
 async function runSelectedTask() {
   if (!state.selectedTask) return;
-  banner(`MiMo 正在处理 ${state.selectedTask.chapter_id}…`, true);
-  const r = await api("/api/cleaning/run-mimo", "POST", { task_file: state.selectedTask.file });
-  banner("");
-  toast(`MiMo 返回 ${r.suggestion_count} 条建议`);
-  state.lastOutput = r.output;
-  renderOutput(r.output);
+  const task = state.selectedTask;
+  state.taskStatus.set(task.file, "running");
+  renderTasks();
+  banner(`MiMo 正在处理 ${task.chapter_id}…`, true);
+  try {
+    const r = await api("/api/cleaning/run-mimo", "POST", { task_file: task.file });
+    state.taskStatus.set(task.file, "done");
+    toast(`MiMo 返回 ${r.suggestion_count} 条建议`);
+    state.lastOutput = r.output;
+    renderOutput(r.output);
+  } catch (err) {
+    state.taskStatus.set(task.file, "error");
+    throw err;
+  } finally {
+    banner("");
+    renderTasks();
+  }
 }
 
 function renderOutput(output) {
@@ -214,6 +230,94 @@ function renderOutput(output) {
   const pre = el("pre", "raw-json");
   pre.textContent = JSON.stringify(output || {}, null, 2);
   rawBox.appendChild(pre);
+}
+
+function fmtNum(n) {
+  return Number(n || 0).toLocaleString("zh-CN");
+}
+
+function fmtPct(v) {
+  return v == null ? "—" : `${(Number(v) * 100).toFixed(1)}%`;
+}
+
+async function loadUsage() {
+  const body = $("#tab-usage");
+  body.replaceChildren(el("div", "empty", "加载中…"));
+  try {
+    const usage = await api("/api/usage");
+    renderUsage(body, usage);
+  } catch (err) {
+    body.replaceChildren(el("div", "empty", err.message));
+  }
+}
+
+function renderUsage(body, usage) {
+  body.replaceChildren();
+  body.appendChild(usageSummary(usage.total));
+  const buckets = el("div", "usage-buckets");
+  for (const b of usage.buckets || []) buckets.appendChild(usageBucket(b));
+  body.appendChild(buckets);
+  const recent = el("div", "usage-recent");
+  recent.appendChild(el("h3", null, "最近调用"));
+  if (!usage.recent?.length) {
+    recent.appendChild(el("div", "empty", "暂无模型用量记录"));
+  } else {
+    for (const r of usage.recent) recent.appendChild(usageRecentRow(r));
+  }
+  body.appendChild(recent);
+}
+
+function usageSummary(u) {
+  const card = el("div", "usage-summary");
+  card.append(
+    usageMetric("调用", fmtNum(u.calls)),
+    usageMetric("输入", fmtNum(u.prompt_tokens)),
+    usageMetric("命中", fmtNum(u.prompt_cache_hit_tokens)),
+    usageMetric("未命中", fmtNum(u.prompt_cache_miss_tokens)),
+    usageMetric("输出", fmtNum(u.completion_tokens)),
+    usageMetric("推理", fmtNum(u.reasoning_tokens)),
+    usageMetric("缓存率", fmtPct(u.prompt_cache_hit_ratio)),
+  );
+  return card;
+}
+
+function usageMetric(label, value) {
+  const box = el("div", "usage-metric");
+  box.append(el("span", "usage-label", label), el("strong", null, value));
+  return box;
+}
+
+function usageBucket(b) {
+  const card = el("div", "usage-bucket");
+  card.appendChild(el("div", "usage-bucket-title", `${b.label} · ${b.calls} 次`));
+  card.appendChild(
+    el(
+      "div",
+      "usage-line",
+      `输入 ${fmtNum(b.prompt_tokens)} / 命中 ${fmtNum(b.prompt_cache_hit_tokens)} / 未命中 ${fmtNum(b.prompt_cache_miss_tokens)} / 缓存率 ${fmtPct(b.prompt_cache_hit_ratio)}`,
+    ),
+  );
+  card.appendChild(
+    el(
+      "div",
+      "usage-line",
+      `输出 ${fmtNum(b.completion_tokens)} / 可见输出 ${fmtNum(b.visible_output_tokens)} / 推理 ${fmtNum(b.reasoning_tokens)} / 图片 ${fmtNum(b.image_tokens)}`,
+    ),
+  );
+  return card;
+}
+
+function usageRecentRow(r) {
+  const row = el("div", "usage-row");
+  row.appendChild(el("div", "usage-row-title", `${r.source} · ${r.stage} · ${r.chapter_id || r.file || ""}`));
+  row.appendChild(
+    el(
+      "div",
+      "usage-line",
+      `输入 ${fmtNum(r.prompt_tokens)}（命中 ${fmtNum(r.prompt_cache_hit_tokens)} / 未命中 ${fmtNum(r.prompt_cache_miss_tokens)}） · 输出 ${fmtNum(r.completion_tokens)} · 推理 ${fmtNum(r.reasoning_tokens)} · 图片 ${fmtNum(r.image_tokens)} · 总计 ${fmtNum(r.total_tokens)}`,
+    ),
+  );
+  return row;
 }
 
 function suggestionCard(s) {
@@ -316,6 +420,8 @@ function setupTabs() {
       document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x === btn));
       $("#tab-suggestions").hidden = btn.dataset.tab !== "suggestions";
       $("#tab-raw").hidden = btn.dataset.tab !== "raw";
+      $("#tab-usage").hidden = btn.dataset.tab !== "usage";
+      if (btn.dataset.tab === "usage") loadUsage();
     });
   });
 }

@@ -29,7 +29,7 @@ function usage(): never {
   console.error("  nc query <bookpack-dir> <current_block> <read_boundary> [--ja]");
   console.error("  nc describe-image <image-path> [prompt]   # 用 vision 角色（如 MiMo）识图");
   console.error("  nc export-epub <bookpack-dir> <out.epub> [volume_id]");
-  console.error("  nc import-epub <epub-path> <bookpack-dir> [--volume-id v01] [--series-id id] [--pack-id id] [--pack-name name] [--force] [--no-validate]");
+  console.error("  nc import-epub <epub-path> <bookpack-dir> [--volume-id v01] [--series-id id] [--pack-id id] [--pack-name name] [--force] [--append] [--no-validate]");
   console.error("  nc prepare-mimo <bookpack-dir> [volume_id]");
   console.error("  nc run-mimo-cleaning <bookpack-dir> <task-json>");
   process.exit(2);
@@ -55,7 +55,7 @@ async function cmdDescribeImage(args: string[]): Promise<void> {
   const r = await chat(
     cfg.vision,
     [{ role: "user", content: [imagePart(bytes, mime), { type: "text", text: prompt }] }],
-    { maxCompletionTokens: 1024 },
+    { maxCompletionTokens: 4096, thinking: "enabled" },
   );
   console.log(`[describe-image] model=${r.model} file=${imagePath} (${mime}, ${bytes.length} bytes)`);
   console.log(r.text);
@@ -180,7 +180,7 @@ function cmdImportEpub(args: string[]): void {
   const result = importEpubToBookpack(epubPath, bookpackDir, opts);
   console.log(`[import-epub] ${result.bookpack_dir}`);
   console.log(
-    `  title=${result.title} volume=${result.volume_id} chapters=${result.chapter_count} ` +
+    `  title=${result.title} volumes=${result.volume_ids.join(",")} chapters=${result.chapter_count} ` +
       `blocks=${result.block_count} images=${result.image_count}`,
   );
   if (result.validation) {
@@ -224,6 +224,7 @@ function parseImportFlags(flags: string[]): {
   packId?: string;
   packName?: string;
   force?: boolean;
+  append?: boolean;
   parseAndValidate?: boolean;
 } {
   const opts: ReturnType<typeof parseImportFlags> = {};
@@ -231,6 +232,8 @@ function parseImportFlags(flags: string[]): {
     const flag = flags[i]!;
     if (flag === "--force") {
       opts.force = true;
+    } else if (flag === "--append") {
+      opts.append = true;
     } else if (flag === "--no-validate") {
       opts.parseAndValidate = false;
     } else if (flag === "--volume-id") {

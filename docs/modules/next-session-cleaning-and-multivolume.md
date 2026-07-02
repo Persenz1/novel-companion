@@ -6,7 +6,7 @@
 2. 系统内部可以分卷、分章节处理；用户只应感知“一本书 -> 自动清洗”。
 3. 清洗后文本处理也应统一为“整本书输入，按卷处理”。不要让起草 / 复核阶段和清洗阶段采用两套割裂逻辑。
 4. 下一轮要测试：
-   - 多卷 EPUB 解包与清洗。
+   - 多个单卷 EPUB 汇入同一 bookpack，以及真实多卷 EPUB 解包与清洗。
    - DeepSeek 对多卷数据的起草 / 复核操作。
    - 多卷操作时，后卷是否能接收到前一卷信息。
 5. DeepSeek cache 命中率当前约 20%，成本不可接受。后续要排查提示词前缀稳定性、请求组织方式和 agent 架构。
@@ -76,8 +76,8 @@ target chapter / candidate payload（最后变化）
 
 ## 下一轮验收建议
 
-1. 准备一个多卷 EPUB 或用 gray-tower 反向生成多卷 EPUB fixture。
-2. 清洗 UI 一键导入，确认能生成多卷 manifest 和多卷 Markdown。
+1. 用 gray-tower 反向生成多个单卷 EPUB fixture（`v01.epub`、`v02.epub`、`v03.epub`、`v04.epub`），不要把所有卷打进一个 EPUB。
+2. 通过清洗 UI 多行 EPUB 路径或 CLI `import --append` 导入同一个 bookpack，确认能生成多卷 manifest 和多卷 Markdown。
 3. 对 v01 / v02 分别跑 DeepSeek 起草 + 复核。
 4. 检查 v02 起草是否复用 v01 已确认实体与长线线索。
 5. 检查 `reports/work_runs.jsonl` 里的 cache hit/miss。

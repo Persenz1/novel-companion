@@ -75,6 +75,9 @@ Compiled 是查询产物，不是人工维护源数据。
 
 ```bash
 npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v01.epub v01
+npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v02.epub v02
+npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v03.epub v03
+npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v04.epub v04
 ```
 
 ## EPUB Import MVP
@@ -93,11 +96,17 @@ npx tsx src/cli.ts export-epub ../samples/gray-tower /tmp/gray-tower-v01.epub v0
 
 ```bash
 npx tsx src/cli.ts import-epub /tmp/gray-tower-v01.epub /tmp/gray-tower-imported \
+  --volume-id v01 \
   --series-id gray_tower_imported \
-  --pack-id gray_tower_imported_project_v1
+  --pack-id gray_tower_imported_project_v1 \
+  --force
+
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v02.epub /tmp/gray-tower-imported --volume-id v02 --append
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v03.epub /tmp/gray-tower-imported --volume-id v03 --append
+npx tsx src/cli.ts import-epub /tmp/gray-tower-v04.epub /tmp/gray-tower-imported --volume-id v04 --append
 ```
 
-当前 MVP 优先验证受控 EPUB fixture；真实 EPUB 的复杂样式、脚注、跨文件章节合并、目录异常和图片锚点修正交给后续清洗增强。
+当前 MVP 优先验证受控单卷 EPUB fixture 和多个单卷 EPUB append 汇入同一 bookpack；真实 EPUB 的复杂样式、脚注、跨文件章节合并、目录异常和图片锚点修正交给后续清洗增强。
 
 ## MiMo Feed Preparation
 

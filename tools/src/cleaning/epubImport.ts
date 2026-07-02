@@ -42,6 +42,8 @@ interface ImportedAsset {
 }
 
 interface ImportedChapter {
+  volumeId: string;
+  volumeTitle: string | null;
   id: string;
   kind: string;
   order: number;
@@ -56,6 +58,7 @@ export interface ImportEpubOptions {
   packId?: string;
   packName?: string;
   force?: boolean;
+  append?: boolean;
   parseAndValidate?: boolean;
 }
 
@@ -63,6 +66,8 @@ export interface ImportEpubResult {
   bookpack_dir: string;
   title: string;
   volume_id: string;
+  volume_ids: string[];
+  volume_count: number;
   chapter_count: number;
   block_count: number;
   image_count: number;
@@ -74,10 +79,10 @@ export function importEpubToBookpack(
   bookpackDir: string,
   options: ImportEpubOptions = {},
 ): ImportEpubResult {
-  const volumeId = options.volumeId ?? "v01";
+  const fallbackVolumeId = options.volumeId ?? "v01";
   const target = new FileStore(bookpackDir);
-  if (target.exists("manifest.json") && !options.force) {
-    throw new Error(`target already contains manifest.json: ${target.root}. Pass --force to overwrite cleaning sources.`);
+  if (target.exists("manifest.json") && !options.force && !options.append) {
+    throw new Error(`target already contains manifest.json: ${target.root}. Pass --force to overwrite or --append to add volumes.`);
   }
 
   const zip = readZip(epubPath);
@@ -94,21 +99,23 @@ export function importEpubToBookpack(
     const itemPath = joinZipPath(opf.rootDir, item.href);
     return parseChapterXhtml(textEntry(zip, itemPath), {
       href: itemPath,
-      volumeId,
+      volumeId: fallbackVolumeId,
+      forceVolumeId: options.volumeId,
       order: idx,
       opfRoot: opf.rootDir,
     });
   });
 
   const allAssets = chapters.flatMap((chapter) => chapter.assets);
+  const volumes = groupChaptersByVolume(chapters);
   writeImportedBookpack(target, zip, {
     title: options.packName ?? opf.title,
     seriesId: options.seriesId ?? slug(opf.title || "imported_book"),
     packId: options.packId ?? `${slug(opf.title || "imported_book")}_project_v1`,
-    volumeId,
-    chapters,
+    volumes,
     assets: allAssets,
     force: options.force === true,
+    append: options.append === true,
   });
 
   let validation: ValidationReport | undefined;
@@ -120,7 +127,9 @@ export function importEpubToBookpack(
   return {
     bookpack_dir: target.root,
     title: opf.title,
-    volume_id: volumeId,
+    volume_id: volumes[0]?.id ?? fallbackVolumeId,
+    volume_ids: volumes.map((volume) => volume.id),
+    volume_count: volumes.length,
     chapter_count: chapters.length,
     block_count: chapters.reduce((n, ch) => n + ch.blocks.length, 0),
     image_count: allAssets.length,
@@ -150,10 +159,17 @@ function parseOpf(xml: string, opfPath: string): OpfPackage {
 
 function parseChapterXhtml(
   xhtml: string,
-  ctx: { href: string; volumeId: string; order: number; opfRoot: string },
+  ctx: { href: string; volumeId: string; forceVolumeId?: string; order: number; opfRoot: string },
 ): ImportedChapter {
   const sectionAttrs = firstAttrs(xhtml, "section");
-  const chapterId = attrFromAttrs(sectionAttrs, "data-nc-chapter-id") ?? generatedChapterId(ctx.volumeId, ctx.order, xhtml);
+  const declaredChapterId = attrFromAttrs(sectionAttrs, "data-nc-chapter-id");
+  const volumeId =
+    ctx.forceVolumeId ??
+    attrFromAttrs(sectionAttrs, "data-nc-volume-id") ??
+    volumeIdFromChapterId(declaredChapterId) ??
+    ctx.volumeId;
+  const volumeTitle = attrFromAttrs(sectionAttrs, "data-nc-volume-title");
+  const chapterId = declaredChapterId ?? generatedChapterId(volumeId, ctx.order, xhtml);
   const title = decodeEntities(stripTags(textOf(xhtml, "h1") || textOf(xhtml, "title") || `Chapter ${ctx.order + 1}`)).trim();
   const kind = attrFromAttrs(sectionAttrs, "epub:type") ?? inferChapterKind(title, ctx.order);
   const body = blockOf(xhtml, "body") || xhtml;
@@ -193,7 +209,7 @@ function parseChapterXhtml(
       const src = attrFromAttrs(imgAttrs, "src");
       if (!src) continue;
       const sourceZipPath = normalizeZipPath(path.posix.join(path.posix.dirname(ctx.href), decodeEntities(src)));
-      const fallbackId = `${ctx.volumeId}_img_${String(nextImageNo).padStart(3, "0")}`;
+      const fallbackId = `${volumeId}_img_${String(nextImageNo).padStart(3, "0")}`;
       const id = attrFromAttrs(attrsText, "data-nc-asset-id") ?? fallbackId;
       const alt = decodeEntities(attrFromAttrs(imgAttrs, "alt") ?? "");
       const ext = path.posix.extname(sourceZipPath) || ".png";
@@ -214,7 +230,30 @@ function parseChapterXhtml(
     if (!asset.block && blocks[0]) asset.block = blocks[0].id;
   }
 
-  return { id: chapterId, kind, order: ctx.order, title, blocks, assets };
+  return { volumeId, volumeTitle, id: chapterId, kind, order: ctx.order, title, blocks, assets };
+}
+
+function groupChaptersByVolume(chapters: ImportedChapter[]): Array<{ id: string; title: string; chapters: ImportedChapter[] }> {
+  const volumes: Array<{ id: string; title: string; chapters: ImportedChapter[] }> = [];
+  const byId = new Map<string, { id: string; title: string; chapters: ImportedChapter[] }>();
+
+  for (const chapter of chapters) {
+    let volume = byId.get(chapter.volumeId);
+    if (!volume) {
+      volume = {
+        id: chapter.volumeId,
+        title: chapter.volumeTitle || titleForVolume(chapter.volumeId, volumes.length),
+        chapters: [],
+      };
+      byId.set(chapter.volumeId, volume);
+      volumes.push(volume);
+    } else if (chapter.volumeTitle && volume.title === titleForVolume(chapter.volumeId, volumes.indexOf(volume))) {
+      volume.title = chapter.volumeTitle;
+    }
+    volume.chapters.push({ ...chapter, order: volume.chapters.length });
+  }
+
+  return volumes;
 }
 
 function writeImportedBookpack(
@@ -224,51 +263,56 @@ function writeImportedBookpack(
     title: string;
     seriesId: string;
     packId: string;
-    volumeId: string;
-    chapters: ImportedChapter[];
+    volumes: Array<{ id: string; title: string; chapters: ImportedChapter[] }>;
     assets: ImportedAsset[];
     force: boolean;
+    append: boolean;
   },
 ): void {
   if (input.force) {
-    for (const rel of ["manifest.json", `parsed/volumes/${input.volumeId}.md`]) {
+    for (const rel of ["manifest.json", "parsed/volumes", "assets/images"]) {
       const abs = store.abs(rel);
-      if (fs.existsSync(abs)) fs.rmSync(abs);
+      if (fs.existsSync(abs)) fs.rmSync(abs, { recursive: true, force: true });
     }
   }
 
-  const manifest: Manifest = {
-    schema_version: "0.1.0",
-    pack_id: input.packId,
-    pack_name: `${input.title} 工程包`,
-    pack_type: "project",
-    series: { id: input.seriesId, title: input.title },
-    volumes: [
-      {
-        id: input.volumeId,
-        title: "第一卷",
-        main_text: `parsed/volumes/${input.volumeId}.md`,
-        chapters: input.chapters.map((chapter) => ({
-          id: chapter.id,
-          order: chapter.order,
-          kind: chapter.kind,
-          title: chapter.title,
-        })),
-      },
-    ],
-    features: {
-      contains_text: true,
-      contains_assets: input.assets.length > 0,
-      contains_ja_reference: false,
-    },
-    rights: {
-      usage_scope: "local_user_import",
-      rights_note: "用户本地导入 EPUB；请确认来源与使用权利。",
-    },
-  };
+  const importedVolumes: Manifest["volumes"] = input.volumes.map((volume) => ({
+    id: volume.id,
+    title: volume.title,
+    main_text: `parsed/volumes/${volume.id}.md`,
+    chapters: volume.chapters.map((chapter) => ({
+      id: chapter.id,
+      order: chapter.order,
+      kind: chapter.kind,
+      title: chapter.title,
+    })),
+  }));
+
+  const existing = input.append && store.exists("manifest.json") ? store.readJson<Manifest>("manifest.json") : null;
+  const manifest: Manifest = existing
+    ? mergeManifestVolumes(existing, importedVolumes, input.assets.length > 0)
+    : {
+        schema_version: "0.1.0",
+        pack_id: input.packId,
+        pack_name: `${input.title} 工程包`,
+        pack_type: "project",
+        series: { id: input.seriesId, title: input.title },
+        volumes: importedVolumes,
+        features: {
+          contains_text: true,
+          contains_assets: input.assets.length > 0,
+          contains_ja_reference: false,
+        },
+        rights: {
+          usage_scope: "local_user_import",
+          rights_note: "用户本地导入 EPUB；请确认来源与使用权利。",
+        },
+      };
 
   store.writeJson("manifest.json", manifest);
-  store.writeText(`parsed/volumes/${input.volumeId}.md`, renderMarkdown(input.chapters));
+  for (const volume of input.volumes) {
+    store.writeText(`parsed/volumes/${volume.id}.md`, renderMarkdown(volume.chapters));
+  }
   for (const asset of input.assets) {
     const entry = zip.get(asset.sourceZipPath);
     if (!entry) continue;
@@ -276,6 +320,24 @@ function writeImportedBookpack(
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, entry.data);
   }
+}
+
+function mergeManifestVolumes(existing: Manifest, importedVolumes: Manifest["volumes"], containsAssets: boolean): Manifest {
+  const volumes = [...existing.volumes];
+  for (const volume of importedVolumes) {
+    const idx = volumes.findIndex((v) => v.id === volume.id);
+    if (idx >= 0) volumes[idx] = volume;
+    else volumes.push(volume);
+  }
+  return {
+    ...existing,
+    volumes,
+    features: {
+      ...(existing.features ?? {}),
+      contains_text: true,
+      contains_assets: Boolean(existing.features?.contains_assets || containsAssets),
+    },
+  };
 }
 
 function renderMarkdown(chapters: ImportedChapter[]): string {
@@ -407,6 +469,29 @@ function generatedChapterId(volumeId: string, order: number, xhtml: string): str
   if (kind === "prologue") return `${volumeId}.prologue`;
   if (kind === "epilogue") return `${volumeId}.epilogue`;
   return `${volumeId}.c${String(order + 1).padStart(2, "0")}`;
+}
+
+function volumeIdFromChapterId(chapterId: string | null): string | null {
+  const m = /^([A-Za-z0-9_-]+)\./.exec(chapterId ?? "");
+  return m?.[1] ?? null;
+}
+
+function titleForVolume(volumeId: string, index: number): string {
+  const m = /^v0*([1-9]\d*)$/i.exec(volumeId);
+  if (m) return chineseVolumeTitle(Number(m[1]));
+  return `第 ${index + 1} 卷`;
+}
+
+function chineseVolumeTitle(n: number): string {
+  const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+  if (n <= 10) return `第${n === 10 ? "十" : digits[n]}卷`;
+  if (n < 20) return `第十${digits[n % 10]}卷`;
+  if (n < 100) {
+    const tens = Math.floor(n / 10);
+    const ones = n % 10;
+    return `第${digits[tens]}十${ones ? digits[ones] : ""}卷`;
+  }
+  return `第${n}卷`;
 }
 
 function inferChapterKind(title: string, order: number): string {
