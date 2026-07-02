@@ -367,6 +367,7 @@ async function cmdDraftPass(args: string[], stage: "draft" | "review"): Promise<
   if (stage === "draft") {
     const r = await runDraftPass(store, cfg, volumeId, pass as never);
     console.log(`[draft-pass] ${volumeId}/${pass} windows=${r.windows} created=${r.created} bad_lines=${r.bad_lines} model=${r.model}`);
+    if (r.skipped_windows) console.log(`  resume-skip: 跳过已完成窗口 ${r.skipped_windows}/${r.windows}`);
     if (r.speaker_unknown != null) console.log(`  speaker: unknown=${r.speaker_unknown} missing=${r.speaker_missing}`);
   } else {
     const r = await runReviewPass(store, cfg, volumeId, pass as never);

@@ -126,8 +126,10 @@ export const DRAFT_PASSES: Record<DraftPassId, DraftPassSpec> = {
     types: ["entity"],
     instruction: `任务：通读全卷，抽取值得进入名册的实体（人物/组织/地点/术语/团体/世界观概念）。这是后续所有抽取的引用基础，宁全勿缺；跑龙套无名路人不收。
 - entity draft 必填：{ id(可读slug,如 entity_linche), series_id, type(character|organization|location|term|group|worldbuilding|event_concept), name, aliases[], first_seen(block_id), status:"accepted", source_span }
+- id 只能用小写拉丁字母/数字/下划线，禁止空格或其它符号；罗马音人名多个词之间用下划线连接（如 entity_horikita_suzune，不要写成 "entity_horikita suzune"）。
 - name 与 aliases 只用正文出现过的称呼；first_seen / visible_from 取该实体首次在正文出现的 block，不要提前。
 - 已在【已确认记忆】名册中的实体不要重复输出；发现名册实体的新别名时，输出同 id 的 entity 行并在 aliases 里补全（risk_flags 加 "alias_update"）。
+- **每行最外层 "type" 字段固定写字面量 "entity"**（候选信封类型，供流水线路由）；character/organization/location/term/group/worldbuilding/event_concept 这些细分类别只能出现在 draft.type 里，不要把细分类别写到最外层 type。
 
 ${CANDIDATE_LINE_FORMAT}`,
   },

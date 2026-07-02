@@ -1,87 +1,40 @@
 # 下一轮：阅读器作业与结果包验收
 
-## 本轮已收口
+## 本轮已收口（2026-07-03，全三卷起草/复核 v2 真实跑通）
 
-2026-07-02，本轮真实 COTE 清洗、日文匹配、起草、复核结果曾合并回主数据包：
-
-```text
-~/nc-workpack/cote-bilingual-v1
-```
-
-后续默认以这个包作为结果基线，不再重复以下流程：
-
-- v01 日文 MiMo 匹配。
-- v02/v03 MiMo 清洗。
-- v01-v03 DeepSeek 起草 / 复核。
-
-## 当前切窗口接续点（2026-07-02 晚）
-
-当前用于下一轮“清洗→起草→复核全流程真实测试”的工作包是：
+工作包：
 
 ```text
 ~/nc-workpack/cote-cleaning-panel-recovered-2026-07-02
 ```
 
-状态：
+v01/v02/v03 三卷 entities/knowledge/narrative 三个 pass（draft+review）全部真实跑完，全包 `validate` + `compile` passed。最终 accepted：entities 83、facts 349、events 173、metrics 31、metric_changes 4、term_cards 6（relation_change 恒被强制升级，0 自动落盘，全部在 review item 里）。缓存命中率均值 95.9%（含每卷首窗冷启动 0%，命中窗口稳定在 95%+）。review item 待人工裁决 192 条（fact 69 / relation_change 66 / event 32 / metric 11 / term_card 10 / entity 3 / metric_change 1），全部 status=open，尚未处理。
 
-- 中文 v01/v02/v03 清洗已全绿：`cleaning-readiness ready=true`，`validate` passed，`compile` passed。
-- 图片图注已补齐：72 张图均有图注。
-- 重复的 `/tmp/novel-companion-cleaning/欢迎来到实力至上主义教室_1_1` 已清理，清洗列表应只以持久包为准。
-- 日文原版 v01/v02/v03 已导入到：
+**speakers pass 已放弃**：性价比/实用性判断（用户决定），draft 覆盖率实测只有 81.3%（402/2154 对话块 3 轮补跑后仍缺，比设计文档记录的更差），已把本轮产出的候选/accepted/review item 全部回滚清除，`prompts.ts`/`pipeline.ts` 里的 speakers pass 代码保留但不再运行。是否要连代码一起删掉，留给用户决定。
 
-```text
-~/nc-workpack/cote-cleaning-panel-recovered-2026-07-02__reference
-```
+本轮过程中发现并修复的真实 bug（都在 `tools/src/agent/`）：
 
-- 阅读器用 `source/ja/{v01,v02,v03}.blocks.json` 已生成：
-  - v01：`3857/3857`
-  - v02：`3904/3907`
-  - v03：`3720/3720`
-- `review/ja_alignment_items.jsonl` 有 12 条：v01 为中文译注 / 译版补充，v02/v03 为章节内分段差异审计项。
+1. **entities pass 空跑 0 产出**：prompt 要求信封 `type` 写细分类别（如 `character`），与「信封 type 必须是字面量 `entity`」的路由约定冲突，模型学的是前者，候选被过滤器静默丢弃。修了 `prompts.ts` 的 entities instruction。
+2. **实体 id 偶发带空格**（如 `entity_horikit suzune`）：加了 slug 格式的显式约束。
+3. **`ACCEPTED_POSITION_INVALID`（visible_from 缺失/幻觉）**：draft schema 里 `visible_from`/`source_span` 与信封字段重复，模型经常漏填或填出超出章节实际长度的幻觉 block id。改为接受前用信封值（已做过 `makeRefNormalizer` 校验，保证有效）无条件覆盖 draft 同名字段——`pipeline.ts` 的 `backfillPositionFields`。
+4. **`edited_draft` 偶尔是 JSON 字符串而非对象**：复核模型 schema 漂移导致 `Cannot create property on string` 崩溃；加了 `asDraftRec` 兼容字符串解析。
+5. **`metric_change` 数值字段带引号**（`"87"` 而非 `87`）：加了 `coerceMetricChangeNumbers`。
+6. **fact 的 `valid_from`/`valid_until` 幻觉 block id**（如引用超出章节实际长度 300+ 的 block）：这个字段语义独立于 `visible_from`（15/231 样本里两者合理不同，不能无条件覆盖），改为有校验集合时才替换非法引用，退回 `visible_from`。
+7. **draft-pass 无 resume-skip**：本轮连续两次网络/服务中断在长 pass 中途暴露了这个已知缺口（设计文档 §10 早有记录），现已实现——重跑同一 pass 会跳过已有 `completed` work_run 的窗口，不再重复产候选。
 
-已知但本轮先放过：
-
-- v02/v03 日文对照主要是“按章节强制重划分 + 顺序 block 匹配”。这种做法能把串行错位限制在章节内部，整体可崩住阅读显示，但仍可能存在局部串行、一对多、多对一和结构差异。
-- 本轮重点不是继续优化中日匹配，而是用这个已清洗数据包进入真实的起草 / 复核 / 裁决 / compile 流程。
-- Agent 不应读取 `source/ja` 作为 evidence；日文仍只用于阅读显示和 alignment 审计。
-
-切窗口后建议直接从：
-
-```text
-cd tools
-npm run workbench
-```
-
-打开工作台，确认当前 bookpack 指向上述持久包，然后跑 DeepSeek v2 起草 / 复核 pass。若 DeepSeek 服务再次中断，优先保留已落盘窗口结果并补做 resume-skip，不要重做清洗。
-
-当前基线：
-
-- validate + compile passed。
-- Accepted 283。
-- review item 30。
-- work_runs 53。
-- v01 日文故事正文匹配 `3857/3857`；v02/v03 暂无日文。
-- v02/v03 正文图片图注缺失为 0，锚点有效。
+日文对照仍是之前的状态（v01 `3857/3857`，v02/v03 未做实体级匹配，只有章节级 alignment 审计项 12 条），本轮没有触碰。
 
 ## 下一步重点
 
-下一轮不再从清洗/起草/复核重新开始，而是在阅读器上完成制作侧作业：
+清洗/起草/复核这条主线到此可以认为闭环跑通过一次；下一轮建议：
 
-1. 角色卡显示、审阅与必要编辑。
-2. 时间线 / 事件线显示与审阅。
-3. 说话人显示与修正。
-4. review item 人工裁决入口打磨。
-5. 阅读器右栏信息密度、排序、跳转和防剧透验证。
-6. usage audit：DeepSeek / MiMo 官网控制台与本地 `/api/usage` 按 request_id / 时间窗口对账。
-
-## 已关闭的本轮测试项
-
-- COTE 中文 v01/v02/v03 导入与非正文过滤。
-- v01 日文只匹配、不解析。
-- v02/v03 MiMo 清洗。
-- v01-v03 DeepSeek 起草 / 复核长程处理。
-- 长章 JSON 截断修复。
-- 短 block id 入库兜底。
+1. **192 条 review item 人工裁决**——这是本轮唯一还没做的环节，建议先做，才能看到"人审计"闭环下真正稳定的 accepted 数据。
+2. 角色卡显示、审阅与必要编辑。
+3. 时间线 / 事件线显示与审阅。
+4. review item 人工裁决入口打磨（配合第 1 条一起打磨交互，而不是先做交互再测）。
+5. 阅读器右栏信息密度、排序、跳转和防剧透验证（说话人展示已经没有数据，相关 UI 若还在，要么隐藏要么等用户决定是否连功能一起砍）。
+6. usage audit：DeepSeek / MiMo 官网控制台与本地 `/api/usage` 按 request_id / 时间窗口对账（本轮 work_runs 里的 token_usage 已经是真实三卷全量数据，可以直接拿来对账）。
+7. （更远期）多本不同 EPUB 验证清洗层通用性。
 
 ---
 

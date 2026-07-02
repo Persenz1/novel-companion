@@ -99,12 +99,29 @@ function setOfIds(rows: Rec[] | undefined): Set<string> {
   return new Set((rows ?? []).map((r) => String((r as { id?: string }).id ?? "")).filter(Boolean));
 }
 
+/**
+ * 复核模型偶尔把 edited_draft 输出成 JSON 字符串而非嵌套对象（schema 漂移）。
+ * 尽量把字符串解析回对象以保留这条修正；解析不出或本来就不是对象/字符串则视为无效。
+ */
+function asDraftRec(value: unknown): Rec | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Rec;
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Rec;
+    } catch {
+      /* 不是合法 JSON，放弃 */
+    }
+  }
+  return undefined;
+}
+
 function collectAutoDraftIds(pending: Candidate[], decisions: Map<string, Rec>): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
   for (const c of pending) {
     const d = decisions.get(c.id);
     if (String((d as { route?: string })?.route ?? "escalate") !== "auto") continue;
-    const edited = (d as { edited_draft?: Rec })?.edited_draft;
+    const edited = asDraftRec((d as { edited_draft?: unknown })?.edited_draft);
     const draft = (edited && Object.keys(edited).length ? edited : c.payload.draft) as Rec | undefined;
     const id = String((draft as { id?: string } | undefined)?.id ?? "");
     if (!id) continue;
@@ -131,6 +148,38 @@ function comparableDraft(r: Rec): string {
     if (!skip.has(key)) out[key] = r[key];
   }
   return JSON.stringify(out);
+}
+
+/**
+ * 候选信封的 source_span/visible_from 在起草时已做过归一化校验（缺失或引用不存在的
+ * block 时回退到窗口边界，见 makeRefNormalizer）；但 prompt schema 同时也要求 draft
+ * 内部重复一份同名字段，那份是模型自由输出、未经校验的——观测到模型会在 draft 里
+ * 填出超出章节实际长度的幻觉 block id（如引用 c17.b0662，该章实际只到 b0521），
+ * 只在 validate 阶段才暴露。两份字段语义重复，信封那份始终可信，故统一以信封值为准，
+ * 不只是补缺，而是覆盖 draft 里的同名字段。
+ */
+function backfillPositionFields(draft: Rec | undefined, c: Candidate, volumeBlockIds?: Set<string>): void {
+  if (!draft) return;
+  draft.visible_from = c.visible_from;
+  draft.source_span = c.source_span;
+  // fact.valid_from/valid_until 是另一组独立含义的 block 引用（不一定等于 visible_from，
+  // 15/231 的既有样本里两者合理不同），不能像 visible_from 那样无条件覆盖；但同样观测到
+  // 模型会在这里幻觉出超出章节实际长度的 block id（如引用 b0754，该章实际只到 b0419）。
+  // 能拿到卷内合法 block 集合时才做校验：非法引用没有可靠的原意可还原，退回 visible_from。
+  if (!volumeBlockIds) return;
+  for (const field of ["valid_from", "valid_until"]) {
+    const v = draft[field];
+    if (typeof v === "string" && v && !volumeBlockIds.has(v)) draft[field] = c.visible_from;
+  }
+}
+
+/** metric_change 的 old_value/new_value/delta 要求数值；模型偶尔输出成带引号的数字字符串。 */
+function coerceMetricChangeNumbers(type: string, draft: Rec | undefined): void {
+  if (!draft || type !== "metric_change") return;
+  for (const field of ["old_value", "new_value", "delta"]) {
+    const v = draft[field];
+    if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) draft[field] = Number(v);
+  }
 }
 
 function autoAcceptBlockers(
@@ -343,6 +392,8 @@ export interface DraftPassResult {
   created: number;
   bad_lines: number;
   model: string;
+  /** resume-skip：本次运行前已有 completed work_run 的窗口数（未重新调用模型）。 */
+  skipped_windows?: number;
   /** speakers pass：unknown 判定数（满足覆盖但不建候选）与补漏后仍缺的对话块数。 */
   speaker_unknown?: number;
   speaker_missing?: number;
@@ -390,11 +441,22 @@ export async function runDraftPass(
   let seq = 0;
 
   const allowedTypes = new Set(spec.types);
-  // 逐窗口落盘：单窗失败（如供应商临时 503）不丢已完成窗口的候选与 work_run，
-  // 重跑同一 pass 前建议先清掉本卷本 pass 的旧候选（参考 drafting-review-v2-design.md）。
+  // 逐窗口落盘：单窗失败（如供应商临时 503 或网络中断）不丢已完成窗口的候选与 work_run。
+  // resume-skip：同 volume/pass/stage=draft 若某窗口已有 completed 的 work_run，
+  // 重跑时直接跳过该窗（不再调用模型、不产生重复候选），只续跑真正未完成的窗口。
   let persisted = existing as unknown as Rec[];
+  const priorWorkRuns = store.readJsonl<Rec>(WORK_RUNS).rows;
+  const completedWindows = new Set(
+    priorWorkRuns
+      .filter(
+        (r) =>
+          r.volume_id === volumeId && r.pass === passId && r.stage === "draft" && r.status === "completed",
+      )
+      .map((r) => Number(r.window_index)),
+  );
 
   for (let wi = 0; wi < windows.length; wi++) {
+    if (completedWindows.has(wi + 1)) continue;
     const win = windows[wi]!;
     const normalizeRef = makeRefNormalizer(win, volumeBlockIds);
     const dialogueIds = win.filter((b) => b.kind === "dialogue").map((b) => b.id);
@@ -570,6 +632,7 @@ export async function runDraftPass(
     created: created.length,
     bad_lines: badLines,
     model: lastModel,
+    ...(completedWindows.size ? { skipped_windows: completedWindows.size } : {}),
     ...(passId === "speakers" ? { speaker_unknown: unknownTotal, speaker_missing: missingTotal } : {}),
   };
 }
@@ -635,6 +698,7 @@ export async function runReviewPass(
   const sections = volumeSections(data, volume);
   const accepted = data.accepted();
   const prefix = buildVolumePrefix(volume.title, sections, renderAcceptedMemory(accepted));
+  const volumeBlockIds = new Set(sections.flatMap((s) => s.blocks).map((b) => b.id));
 
   const agentStore = new AgentStore(store, manifest.series.id);
   const reviewItems = store.readJsonl<Rec>(REVIEW_ITEMS).rows;
@@ -690,8 +754,10 @@ export async function runReviewPass(
       let route = String((d as { route?: string })?.route ?? "escalate");
       let reason = String((d as { reason?: string })?.reason ?? "复核未给出决定，默认升级。");
       const chapterId = chapterOfBlock(c.source_span.start_block);
-      const edited = (d as { edited_draft?: Rec })?.edited_draft;
+      const edited = asDraftRec((d as { edited_draft?: unknown })?.edited_draft);
       const draft = (edited && Object.keys(edited).length ? edited : c.payload.draft) as Rec;
+      backfillPositionFields(draft, c, volumeBlockIds);
+      coerceMetricChangeNumbers(c.type, draft);
 
       const forced = draft ? forcedEscalation(c, draft) : null;
       if (route === "auto" && forced) {
@@ -850,6 +916,8 @@ export function resolveExceptionsBatch(store: FileStore, decisions: ResolveDecis
       const edited = editedDraft;
       const draft = (edited && Object.keys(edited).length ? edited : candidate.payload.draft) as Rec;
       if (!draft || !draft.id) throw new Error("草案缺少 id，无法接受。");
+      backfillPositionFields(draft, candidate);
+      coerceMetricChangeNumbers(candidate.type, draft);
       const r = agentStore.write(candidate.type, draft, {
         operation: edited && Object.keys(edited).length ? "accept_candidate_with_edit" : "accept_candidate",
         decidedBy: "user",

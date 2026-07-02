@@ -19,6 +19,8 @@
 - `modules/real-book-bilingual-long-range-test.md`：本轮真实书籍中日匹配、阅读器渲染与长程处理测试计划。
 - `modules/provider-adapters.md`：DeepSeek / MiMo 等模型供应商适配层。
 - `modules/ai-workbench.md`：AI 起草、独立复核、数据工作台、Change 和回滚。
+- `modules/drafting-review-v2-design.md`：起草/复核 v2（分 pass 抽取 + 稳定前缀缓存），设计与实测进展。
+- `modules/drafting-review-v2-three-volume-test-2026-07-03.md`：起草/复核 v2 三卷（COTE）真实全量测试结果、过程中修复的 6 个数据完整性 bug、speakers pass 放弃记录。
 - `modules/compiled-query.md`：`reader_index.json` 与 `getVisibleContext()`。
 - `modules/reader.md`：Markdown 阅读器（已实现）＋ 中日双语逐段显示。
 - `modules/test-fixture.md`：gray-tower 4 卷样例包、fixture 和验收边界。
