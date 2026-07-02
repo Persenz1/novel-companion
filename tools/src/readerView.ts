@@ -9,11 +9,15 @@ import { isReadableChapterKind } from "./chapterKind.js";
 
 type Rec = Record<string, unknown>;
 
-export function buildReaderBook(store: FileStore): Rec {
+export function buildReaderBook(store: FileStore, opts: { volumeId?: string } = {}): Rec {
   const manifest = store.readJson<Manifest>("manifest.json");
   const blocks = store.readJsonl<Block>("parsed/blocks.jsonl").rows;
   const assets = store.readJsonl<Asset>("parsed/assets.jsonl").rows;
   const anchors = store.readJsonl<AssetAnchor>("parsed/asset_anchors.jsonl").rows;
+  const selectedVolume = opts.volumeId
+    ? manifest.volumes.find((v) => v.id === opts.volumeId)
+    : manifest.volumes[0];
+  if (!selectedVolume) throw new Error(opts.volumeId ? `找不到卷：${opts.volumeId}` : "manifest 中没有卷。");
 
   // 双语日文：每卷 source/ja/{volume}.blocks.json（block_id -> 日文），1:1 对应 block。
   const jaByBlock = new Map<string, string>();
@@ -69,11 +73,9 @@ export function buildReaderBook(store: FileStore): Rec {
   const toc: Rec[] = [];
 
   for (const volume of manifest.volumes) {
-    sections.push({ type: "volume", id: volume.id, title: volume.title });
     const chapters = [...volume.chapters].sort((a, b) => a.order - b.order);
     for (const chapter of chapters) {
       if (!isReadableChapterKind(chapter.kind)) continue;
-      sections.push({ type: "chapter", id: chapter.id, title: chapter.title, kind: chapter.kind });
       const chBlocks = blocksByChapter.get(chapter.id) ?? [];
       toc.push({
         id: chapter.id,
@@ -82,6 +84,9 @@ export function buildReaderBook(store: FileStore): Rec {
         volume_id: volume.id,
         first_block: chBlocks[0]?.id ?? null,
       });
+      if (volume.id !== selectedVolume.id) continue;
+      if (sections.length === 0) sections.push({ type: "volume", id: volume.id, title: volume.title });
+      sections.push({ type: "chapter", id: chapter.id, title: chapter.title, kind: chapter.kind });
       for (const b of chBlocks) {
         order.push(b.id);
         sections.push({
@@ -104,6 +109,7 @@ export function buildReaderBook(store: FileStore): Rec {
     pack_name: manifest.pack_name,
     series: manifest.series,
     volumes: manifest.volumes.map((v) => ({ id: v.id, title: v.title })),
+    active_volume_id: selectedVolume.id,
     has_ja: jaByBlock.size > 0,
     has_speakers: speakersByBlock.size > 0,
     sections,

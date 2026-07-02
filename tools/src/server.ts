@@ -385,7 +385,10 @@ async function handleApi(
 
   // 阅读器视图（与工作台共用同一 bookpack 配置）：按阅读顺序展开的中日双语正文。
   if (pathname === "/api/book" && method === "GET") {
-    return sendJson(res, 200, buildReaderBook(openBookpack(cfg)));
+    const url = new URL(pathname + "?" + (req.url?.split("?")[1] ?? ""), "http://localhost");
+    return sendJson(res, 200, buildReaderBook(openBookpack(cfg), {
+      volumeId: url.searchParams.get("volume_id") ?? undefined,
+    }));
   }
 
   // 阅读器防剧透查询：完全复用 CompiledQuery，read_boundary 是唯一可见边界。

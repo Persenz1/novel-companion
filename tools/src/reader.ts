@@ -66,7 +66,9 @@ function handleApi(req: http.IncomingMessage, res: http.ServerResponse, url: URL
   const pathname = url.pathname;
 
   if (pathname === "/api/book" && req.method === "GET") {
-    return sendJson(res, 200, buildReaderBook(store));
+    return sendJson(res, 200, buildReaderBook(store, {
+      volumeId: url.searchParams.get("volume_id") ?? undefined,
+    }));
   }
 
   // 防剧透查询：完全复用 compiled 查询，read_boundary 是唯一可见边界。

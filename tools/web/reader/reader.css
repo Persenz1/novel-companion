@@ -78,6 +78,7 @@ button.ghost { background: transparent; }
 .drawer-head { font-weight: 700; padding: 14px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .drawer ul { list-style: none; margin: 0; padding: 6px 0; }
 .toc-volume { border-bottom: 1px solid var(--line); }
+.toc-volume.active summary { background: var(--accent-soft); }
 .toc-volume summary {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 10px 14px; cursor: pointer; background: #f7f9fc; user-select: none;

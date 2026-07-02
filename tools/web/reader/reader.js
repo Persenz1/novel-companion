@@ -17,6 +17,8 @@ const state = {
   order: [], // block id, 全局阅读顺序
   indexOf: new Map(), // block id -> 全局序号
   blockEls: new Map(), // block id -> 中栏 DOM
+  activeVolumeId: null,
+  progressByVolume: new Map(), // volume id -> { currentIndex, boundaryIndex }
   currentIndex: 0,
   boundaryIndex: 0,
   displayMode: "both", // both | zh | ja
@@ -50,28 +52,56 @@ async function api(path) {
 
 async function init() {
   try {
-    const book = await api("/api/book");
-    state.book = book;
-    state.order = book.order;
-    book.order.forEach((id, i) => state.indexOf.set(id, i));
-    $("#pack-status").textContent = `${book.pack_name}（${book.series.title}）`;
-    if (!book.has_speakers) $(".speaker-toggle").style.display = "none";
-    state.displayMode = book.has_ja ? "both" : "zh";
-    document.body.dataset.mode = state.displayMode;
-    document.body.classList.toggle("speakers-on", state.showSpeakers);
-    renderProse(book.sections);
-    renderToc(book.toc);
     bindEvents();
-    updateDisplayControl();
-    state.currentIndex = 0;
-    state.boundaryIndex = 0;
-    updateBlockStyles();
-    updateBoundaryBar();
-    await refreshPanel();
+    document.body.classList.toggle("speakers-on", state.showSpeakers);
+    await loadBook();
   } catch (err) {
     $("#pack-status").textContent = "加载失败";
     toast(err.message, true);
   }
+}
+
+async function loadBook(volumeId = null) {
+  saveVolumeProgress();
+  const q = volumeId ? `?${new URLSearchParams({ volume_id: volumeId })}` : "";
+  const book = await api(`/api/book${q}`);
+  state.book = book;
+  state.activeVolumeId = book.active_volume_id;
+  state.order = book.order || [];
+  state.indexOf = new Map();
+  state.blockEls = new Map();
+  state.order.forEach((id, i) => state.indexOf.set(id, i));
+  const volume = (book.volumes || []).find((v) => v.id === state.activeVolumeId);
+  $("#pack-status").textContent = `${book.pack_name}（${book.series.title}）· ${volume?.title || state.activeVolumeId}`;
+  $(".speaker-toggle").style.display = book.has_speakers ? "inline-flex" : "none";
+  state.displayMode = book.has_ja ? state.displayMode : "zh";
+  document.body.dataset.mode = state.displayMode;
+  renderProse(book.sections);
+  renderToc(book.toc);
+  updateDisplayControl();
+
+  const saved = state.progressByVolume.get(state.activeVolumeId);
+  state.currentIndex = Math.min(saved?.currentIndex ?? 0, Math.max(0, state.order.length - 1));
+  state.boundaryIndex = Math.min(saved?.boundaryIndex ?? 0, Math.max(0, state.order.length - 1));
+  updateBlockStyles();
+  updateBoundaryBar();
+  updatePreviewFlag();
+  await refreshPanel();
+
+  const cont = scrollContainer();
+  cont.scrollTop = 0;
+  if (saved && state.order.length) {
+    state.suppressUntil = performance.now() + 300;
+    requestAnimationFrame(() => jumpToBlock(state.currentIndex, false));
+  }
+}
+
+function saveVolumeProgress() {
+  if (!state.activeVolumeId || !state.order.length) return;
+  state.progressByVolume.set(state.activeVolumeId, {
+    currentIndex: state.currentIndex,
+    boundaryIndex: state.boundaryIndex,
+  });
 }
 
 // ---------- 渲染正文 ----------
@@ -145,8 +175,8 @@ function renderToc(toc) {
   }
   for (const [volumeId, chapters] of grouped) {
     const details = document.createElement("details");
-    details.className = "toc-volume";
-    details.open = list.children.length === 0;
+    details.className = `toc-volume${volumeId === state.activeVolumeId ? " active" : ""}`;
+    details.open = volumeId === state.activeVolumeId;
     const summary = document.createElement("summary");
     summary.append(
       el("span", "toc-volume-title", volumeTitles.get(volumeId) || volumeId),
@@ -156,7 +186,8 @@ function renderToc(toc) {
     const ul = document.createElement("ul");
     for (const ch of chapters) {
       const li = el("li", `kind-${ch.kind}`, ch.title);
-      li.onclick = () => {
+      li.onclick = async () => {
+        if (ch.volume_id !== state.activeVolumeId) await loadBook(ch.volume_id);
         jumpToChapter(ch.id);
       };
       ul.appendChild(li);
@@ -296,12 +327,12 @@ function renderPanel(ctx) {
 
 // ---------- 跳转 / 操作 ----------
 
-function jumpToBlock(idx) {
+function jumpToBlock(idx, smooth = true) {
   const node = state.blockEls.get(state.order[idx]);
   if (!node) return;
   // 程序化跳转：开一个抑制窗口，落地滚动不推进已读边界。
   state.suppressUntil = performance.now() + 900;
-  node.scrollIntoView({ behavior: "smooth", block: "center" });
+  node.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" });
 }
 
 function jumpToChapter(chapterId) {
