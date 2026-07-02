@@ -12,6 +12,7 @@ const state = {
   lastOutput: null,
   activeBookpack: false,
   taskStatus: new Map(),
+  projects: [],
 };
 
 async function api(path, method = "GET", body) {
@@ -51,12 +52,64 @@ function setProgress(done, total, text) {
 async function loadState() {
   const data = await api("/api/state");
   if (data.bookpack?.ok) {
-    $("#pack-status").textContent = state.activeBookpack
-      ? `${data.bookpack.pack_name}（${data.bookpack.series?.title || "未命名"}）`
-      : "等待导入 EPUB";
+    state.activeBookpack = true;
+    $("#pack-status").textContent = `${data.bookpack.pack_name}（${data.bookpack.series?.title || "未命名"}）`;
   } else {
     $("#pack-status").textContent = "等待导入 EPUB";
   }
+}
+
+async function loadProjects() {
+  const box = $("#project-list");
+  box.replaceChildren(el("div", "empty compact", "加载中…"));
+  try {
+    const { projects } = await api("/api/cleaning/projects");
+    state.projects = projects || [];
+    renderProjects();
+  } catch (err) {
+    box.replaceChildren(el("div", "empty compact", err.message));
+  }
+}
+
+function renderProjects() {
+  const box = $("#project-list");
+  box.replaceChildren();
+  if (!state.projects.length) {
+    box.appendChild(el("div", "empty compact", "暂无清洗项目"));
+    return;
+  }
+  for (const p of state.projects) box.appendChild(projectCard(p));
+}
+
+function projectCard(p) {
+  const card = el("div", `project-card${p.active ? " active" : ""}`);
+  card.appendChild(el("div", "project-title", p.pack_name || p.root));
+  card.appendChild(el("div", "project-meta", `${p.volume_count || 0} 卷 · ${p.validation_status || "未校验"} · ${p.has_reference ? "已挂原文" : "未挂原文"}`));
+  card.appendChild(el("div", "project-path", p.root));
+  const row = el("div", "row");
+  const use = el("button", p.active ? "primary" : null, p.active ? "当前项目" : "使用");
+  use.disabled = !!p.active;
+  use.addEventListener("click", () => useProject(p.root).catch((err) => toast(err.message, true)));
+  row.appendChild(use);
+  card.appendChild(row);
+  return card;
+}
+
+async function useProject(root) {
+  await api("/api/cleaning/use-project", "POST", { bookpack_dir: root });
+  state.activeBookpack = true;
+  state.selectedTask = null;
+  state.lastOutput = null;
+  state.taskStatus = new Map();
+  await loadState();
+  await loadProjects();
+  await loadTasks();
+  state.tasks.forEach((task) => state.taskStatus.set(task.file, "pending"));
+  renderTasks();
+  await loadAssets();
+  await loadQueue();
+  await loadUsage();
+  toast("已切换清洗项目");
 }
 
 function resetWorkspace() {
@@ -66,8 +119,10 @@ function resetWorkspace() {
   state.activeBookpack = false;
   state.taskStatus = new Map();
   $("#pack-status").textContent = "等待导入 EPUB";
+  $("#project-name").value = "";
   $("#epub-path").value = "";
   $("#reference-epub-path").value = "";
+  $("#reference-add-path").value = "";
   setProgress(0, 0, "等待开始");
   renderTasks();
   $("#asset-list").replaceChildren(el("div", "empty", "导入 EPUB 后显示图片"));
@@ -90,6 +145,7 @@ async function autoClean() {
   banner("正在导入 EPUB 并生成章节任务…", true);
   setProgress(0, epubPaths.length, `导入 EPUB 1/${epubPaths.length}`);
   const r = await api("/api/cleaning/auto-start", "POST", {
+    project_name: $("#project-name").value.trim(),
     epub_paths: epubPaths,
     reference_epub_paths: referenceEpubPaths,
   });
@@ -102,6 +158,7 @@ async function autoClean() {
   const refText = refSummary?.epub_count ? `；原文 ${refSummary.epub_count} 本已挂入` : "";
   toast(`导入完成：${summary.epub_count || 1} 本，${summary.chapter_count || 0} 章，${summary.block_count || 0} blocks，${summary.image_count || 0} 图${refText}`);
   await loadState();
+  await loadProjects();
   renderTasks();
   await loadAssets();
   renderOutput({
@@ -121,6 +178,22 @@ async function autoClean() {
   } catch (err) {
     toast(err.message, true);
   }
+}
+
+async function addReferenceToCurrent() {
+  const referenceEpubPaths = $("#reference-add-path").value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!state.activeBookpack) throw new Error("请先选择一个清洗项目。");
+  if (!referenceEpubPaths.length) throw new Error("请填写对照原文 EPUB 路径。");
+  const r = await api("/api/cleaning/import-reference", "POST", {
+    reference_epub_paths: referenceEpubPaths,
+  });
+  const s = r.reference_import_summary || {};
+  $("#reference-add-path").value = "";
+  await loadProjects();
+  toast(`已挂入原文 ${s.epub_count || referenceEpubPaths.length} 本`);
 }
 
 function resetForRun() {
@@ -642,13 +715,25 @@ function bind() {
   $("#btn-auto-clean").addEventListener("click", () => autoClean().catch((err) => { banner(""); toast(err.message, true); }));
   $("#btn-reset").addEventListener("click", resetWorkspace);
   $("#btn-run-selected").addEventListener("click", () => runSelectedTask().catch((err) => { banner(""); toast(err.message, true); }));
+  $("#btn-refresh-projects").addEventListener("click", () => loadProjects());
+  $("#btn-add-reference").addEventListener("click", () => addReferenceToCurrent().catch((err) => toast(err.message, true)));
   setupTabs();
 }
 
 async function init() {
   bind();
-  resetWorkspace();
   await loadState();
+  await loadProjects();
+  if (state.activeBookpack) {
+    await loadTasks();
+    state.tasks.forEach((task) => state.taskStatus.set(task.file, "pending"));
+    renderTasks();
+    await loadAssets();
+    await loadQueue();
+  } else {
+    resetWorkspace();
+    await loadProjects();
+  }
 }
 
 init().catch((err) => toast(err.message, true));

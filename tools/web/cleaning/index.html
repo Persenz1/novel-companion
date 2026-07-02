@@ -17,10 +17,27 @@
     <main class="cleaning-layout">
       <aside class="col col-left">
         <section class="panel">
-          <h2>自动清洗</h2>
+          <h2>已有清洗项目</h2>
+          <div class="row">
+            <button id="btn-refresh-projects">刷新列表</button>
+          </div>
+          <div id="project-list" class="project-list"></div>
+          <label class="field">
+            <span>给当前项目补挂对照原文 EPUB</span>
+            <textarea id="reference-add-path" class="text-input epub-input small" placeholder="每行一个原文 EPUB，顺序与当前项目卷对应"></textarea>
+          </label>
+          <button class="wide" id="btn-add-reference">挂入当前项目</button>
+        </section>
+
+        <section class="panel">
+          <h2>新建一本书</h2>
+          <label class="field">
+            <span>书名 / 系列名（可选）</span>
+            <input id="project-name" type="text" placeholder="留空则从 EPUB 文件名识别" />
+          </label>
           <label class="field">
             <span>中文 EPUB 路径</span>
-            <textarea id="epub-path" class="text-input epub-input" placeholder="每行一个 EPUB 绝对路径"></textarea>
+            <textarea id="epub-path" class="text-input epub-input" placeholder="同一本书/同一系列，每行一个 EPUB 绝对路径"></textarea>
           </label>
           <label class="field">
             <span>对照原文 EPUB 路径（可选）</span>

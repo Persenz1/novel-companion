@@ -140,6 +140,114 @@ function batchStem(epubPaths: string[]): string {
   return trimmed || first;
 }
 
+function importReferenceEpubs(store: FileStore, referenceEpubPaths: string[]): {
+  imports: ReturnType<typeof importEpubToBookpack>[];
+  summary: Rec | null;
+} {
+  if (referenceEpubPaths.length === 0) return { imports: [], summary: null };
+  const manifest = store.readJson<Manifest>("manifest.json");
+  const referenceDir = `${store.root}__reference`;
+  const id = `${slugId(manifest.series.id || path.basename(store.root))}_reference`;
+  const imports = referenceEpubPaths.map((epubPath, idx) =>
+    importEpubToBookpack(epubPath, referenceDir, {
+      volumeId: volumeIdForEpub(epubPath, idx),
+      seriesId: id,
+      packId: `${id}_project_v1`,
+      packName: `${manifest.pack_name} 对照原文`,
+      force: idx === 0,
+      append: idx > 0,
+      parseAndValidate: true,
+    }),
+  );
+  const summary = {
+    epub_count: imports.length,
+    volume_ids: imports.flatMap((item) => item.volume_ids),
+    chapter_count: imports.reduce((n, item) => n + item.chapter_count, 0),
+    block_count: imports.reduce((n, item) => n + item.block_count, 0),
+    image_count: imports.reduce((n, item) => n + item.image_count, 0),
+    validation_status: imports[imports.length - 1]?.validation?.status ?? "unknown",
+    reference_dir: referenceDir,
+  };
+  store.writeJson("reports/reference_epub_imports.json", {
+    schema_version: "0.1.0",
+    generated_at: new Date().toISOString(),
+    kind: "parallel_reference_epub",
+    role: "display_alignment_source",
+    note: "对照原文只作为后续段落匹配/阅读显示来源，不进入结构化起草复核证据。",
+    reference_dir: referenceDir,
+    imports,
+    summary,
+  });
+  store.writeJson("manifest.json", {
+    ...manifest,
+    features: {
+      ...(manifest.features ?? {}),
+      has_reference_epub_source: true,
+    },
+  });
+  return { imports, summary };
+}
+
+function knownCleaningRoots(): string[] {
+  return [
+    path.join("/tmp", "novel-companion-cleaning"),
+    path.join(process.env.HOME ?? "", "nc-workpack"),
+  ].filter(Boolean);
+}
+
+function projectInfo(root: string, activeRoot: string): Rec | null {
+  try {
+    const manifestPath = path.join(root, "manifest.json");
+    if (!fs.existsSync(manifestPath)) return null;
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Manifest;
+    const referenceReport = path.join(root, "reports", "reference_epub_imports.json");
+    const validationReport = path.join(root, "reports", "validation_report.json");
+    const reference = fs.existsSync(referenceReport)
+      ? (JSON.parse(fs.readFileSync(referenceReport, "utf8")) as Rec).summary as Rec | undefined
+      : null;
+    const validation = fs.existsSync(validationReport)
+      ? (JSON.parse(fs.readFileSync(validationReport, "utf8")) as Rec).status
+      : null;
+    return {
+      root,
+      pack_name: manifest.pack_name,
+      series: manifest.series,
+      volume_count: manifest.volumes.length,
+      volumes: manifest.volumes.map((v) => ({ id: v.id, title: v.title, chapter_count: v.chapters.length })),
+      has_reference: Boolean(reference),
+      reference,
+      validation_status: validation,
+      active: path.resolve(root) === path.resolve(activeRoot || ""),
+      mtime_ms: fs.statSync(manifestPath).mtimeMs,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function listCleaningProjects(activeRoot: string): Rec[] {
+  const seen = new Set<string>();
+  const out: Rec[] = [];
+  const add = (dir: string) => {
+    const resolved = path.resolve(dir);
+    if (seen.has(resolved)) return;
+    seen.add(resolved);
+    const info = projectInfo(resolved, activeRoot);
+    if (info) out.push(info);
+  };
+  if (activeRoot) add(activeRoot);
+  for (const root of knownCleaningRoots()) {
+    if (!fs.existsSync(root)) continue;
+    for (const name of fs.readdirSync(root)) {
+      if (name.endsWith("__reference")) continue;
+      if (name.includes(".before-")) continue;
+      const dir = path.join(root, name);
+      if (fs.existsSync(path.join(dir, "manifest.json"))) add(dir);
+    }
+  }
+  return out.sort((a, b) => Number(b.mtime_ms ?? 0) - Number(a.mtime_ms ?? 0));
+}
+
 function serveStatic(res: http.ServerResponse, urlPath: string): void {
   // "/" -> 工作台首页；"/reader/" -> 阅读器首页（其静态资源在 web/reader/ 下，用相对路径）。
   let rel: string;
@@ -529,12 +637,41 @@ async function handleApi(
   }
 
   // ---- 清洗·图片标注（Phase 1）----
+  if (pathname === "/api/cleaning/projects" && method === "GET") {
+    return sendJson(res, 200, { projects: listCleaningProjects(cfg.bookpack_dir) });
+  }
+
+  if (pathname === "/api/cleaning/use-project" && method === "POST") {
+    const body = await readBody(req);
+    const bookpackDir = String(body.bookpack_dir ?? "");
+    if (!bookpackDir) return sendJson(res, 400, { error: "bookpack_dir 必填。" });
+    const store = new FileStore(bookpackDir);
+    if (!store.exists("manifest.json")) return sendJson(res, 400, { error: `目录下没有 manifest.json：${bookpackDir}` });
+    const next = { ...cfg, bookpack_dir: store.root };
+    saveConfig(next);
+    return sendJson(res, 200, { ok: true, project: projectInfo(store.root, store.root), config: redactConfig(next) });
+  }
+
+  if (pathname === "/api/cleaning/import-reference" && method === "POST") {
+    const body = await readBody(req);
+    const referenceEpubPaths = referenceEpubPathsFromBody(body);
+    if (referenceEpubPaths.length === 0) return sendJson(res, 400, { error: "reference_epub_paths 必填。" });
+    const store = openBookpack(cfg);
+    const reference = importReferenceEpubs(store, referenceEpubPaths);
+    return sendJson(res, 200, {
+      reference_imports: reference.imports,
+      reference_import_summary: reference.summary,
+      project: projectInfo(store.root, store.root),
+    });
+  }
+
   if (pathname === "/api/cleaning/auto-start" && method === "POST") {
     const body = await readBody(req);
     const epubPaths = epubPathsFromBody(body);
     const referenceEpubPaths = referenceEpubPathsFromBody(body);
     if (epubPaths.length === 0) return sendJson(res, 400, { error: "epub_path 必填。" });
-    const stem = batchStem(epubPaths);
+    const projectName = String(body.project_name ?? "").trim();
+    const stem = projectName || batchStem(epubPaths);
     const id = slugId(stem);
     const targetDir = path.join("/tmp/novel-companion-cleaning", id);
     const imports = epubPaths.map((epubPath, idx) =>
@@ -551,52 +688,7 @@ async function handleApi(
     const next = { ...cfg, bookpack_dir: targetDir };
     saveConfig(next);
     const store = new FileStore(targetDir);
-    let referenceImports: ReturnType<typeof importEpubToBookpack>[] = [];
-    let referenceSummary: Rec | null = null;
-    if (referenceEpubPaths.length > 0) {
-      const referenceDir = `${targetDir}__reference`;
-      referenceImports = referenceEpubPaths.map((epubPath, idx) =>
-        importEpubToBookpack(epubPath, referenceDir, {
-          volumeId: volumeIdForEpub(epubPath, idx),
-          seriesId: `${id}_reference`,
-          packId: `${id}_reference_project_v1`,
-          packName: `${stem} 对照原文`,
-          force: idx === 0,
-          append: idx > 0,
-          parseAndValidate: true,
-        }),
-      );
-      const chapterCount = referenceImports.reduce((n, item) => n + item.chapter_count, 0);
-      const blockCount = referenceImports.reduce((n, item) => n + item.block_count, 0);
-      const imageCount = referenceImports.reduce((n, item) => n + item.image_count, 0);
-      referenceSummary = {
-        epub_count: referenceImports.length,
-        volume_ids: referenceImports.flatMap((item) => item.volume_ids),
-        chapter_count: chapterCount,
-        block_count: blockCount,
-        image_count: imageCount,
-        validation_status: referenceImports[referenceImports.length - 1]?.validation?.status ?? "unknown",
-        reference_dir: referenceDir,
-      };
-      store.writeJson("reports/reference_epub_imports.json", {
-        schema_version: "0.1.0",
-        generated_at: new Date().toISOString(),
-        kind: "parallel_reference_epub",
-        role: "display_alignment_source",
-        note: "对照原文只作为后续段落匹配/阅读显示来源，不进入结构化起草复核证据。",
-        reference_dir: referenceDir,
-        imports: referenceImports,
-        summary: referenceSummary,
-      });
-      const manifest = store.readJson<Manifest>("manifest.json");
-      store.writeJson("manifest.json", {
-        ...manifest,
-        features: {
-          ...(manifest.features ?? {}),
-          has_reference_epub_source: true,
-        },
-      });
-    }
+    const reference = importReferenceEpubs(store, referenceEpubPaths);
     // 确定性规范化在导入后自动执行（孤立数字/符号→separator），让下游任务与建议基于干净结构。
     const normalized = normalizeBookpack(store);
     const prepared = prepareMimoCleaningInputs(store);
@@ -616,8 +708,8 @@ async function handleApi(
       },
       normalized: { edits: normalized.total_edits },
       prepared,
-      reference_imports: referenceImports,
-      reference_import_summary: referenceSummary,
+      reference_imports: reference.imports,
+      reference_import_summary: reference.summary,
       target_dir: targetDir,
       config: redactConfig(next),
     });

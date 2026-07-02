@@ -77,6 +77,7 @@ textarea.text-input {
 textarea.epub-input { min-height: 118px; font-family: ui-monospace, monospace; }
 textarea.epub-input.small { min-height: 86px; }
 .wide { width: 100%; margin-top: 6px; }
+.row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .checkline { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; margin: 2px 0 10px; }
 
 .chapter-list { list-style: none; margin: 0; padding: 0; }
@@ -185,6 +186,17 @@ textarea.epub-input.small { min-height: 86px; }
 .task-state.error { background: #fbeae8; color: var(--red); }
 .progress-track { height: 8px; border-radius: 99px; background: #eef1f5; overflow: hidden; border: 1px solid var(--line); }
 .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 160ms ease; }
+.project-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; margin-bottom: 10px; }
+.project-card {
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 9px 10px;
+}
+.project-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.project-title { font-weight: 700; line-height: 1.35; }
+.project-meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.project-path {
+  color: var(--muted); font-size: 11px; margin: 5px 0 7px;
+  font-family: ui-monospace, monospace; overflow-wrap: anywhere;
+}
 .suggestion { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #fff; }
 .suggestion-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .risk { margin-left: auto; font-size: 11px; padding: 1px 7px; border-radius: 10px; }
