@@ -2,7 +2,7 @@
 
 ## 本轮已收口
 
-2026-07-02，本轮真实 COTE 清洗、日文匹配、起草、复核结果已经合并回主数据包：
+2026-07-02，本轮真实 COTE 清洗、日文匹配、起草、复核结果曾合并回主数据包：
 
 ```text
 ~/nc-workpack/cote-bilingual-v1
@@ -13,6 +13,46 @@
 - v01 日文 MiMo 匹配。
 - v02/v03 MiMo 清洗。
 - v01-v03 DeepSeek 起草 / 复核。
+
+## 当前切窗口接续点（2026-07-02 晚）
+
+当前用于下一轮“清洗→起草→复核全流程真实测试”的工作包是：
+
+```text
+~/nc-workpack/cote-cleaning-panel-recovered-2026-07-02
+```
+
+状态：
+
+- 中文 v01/v02/v03 清洗已全绿：`cleaning-readiness ready=true`，`validate` passed，`compile` passed。
+- 图片图注已补齐：72 张图均有图注。
+- 重复的 `/tmp/novel-companion-cleaning/欢迎来到实力至上主义教室_1_1` 已清理，清洗列表应只以持久包为准。
+- 日文原版 v01/v02/v03 已导入到：
+
+```text
+~/nc-workpack/cote-cleaning-panel-recovered-2026-07-02__reference
+```
+
+- 阅读器用 `source/ja/{v01,v02,v03}.blocks.json` 已生成：
+  - v01：`3857/3857`
+  - v02：`3904/3907`
+  - v03：`3720/3720`
+- `review/ja_alignment_items.jsonl` 有 12 条：v01 为中文译注 / 译版补充，v02/v03 为章节内分段差异审计项。
+
+已知但本轮先放过：
+
+- v02/v03 日文对照主要是“按章节强制重划分 + 顺序 block 匹配”。这种做法能把串行错位限制在章节内部，整体可崩住阅读显示，但仍可能存在局部串行、一对多、多对一和结构差异。
+- 本轮重点不是继续优化中日匹配，而是用这个已清洗数据包进入真实的起草 / 复核 / 裁决 / compile 流程。
+- Agent 不应读取 `source/ja` 作为 evidence；日文仍只用于阅读显示和 alignment 审计。
+
+切窗口后建议直接从：
+
+```text
+cd tools
+npm run workbench
+```
+
+打开工作台，确认当前 bookpack 指向上述持久包，然后跑 DeepSeek v2 起草 / 复核 pass。若 DeepSeek 服务再次中断，优先保留已落盘窗口结果并补做 resume-skip，不要重做清洗。
 
 当前基线：
 

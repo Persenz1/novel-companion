@@ -31,8 +31,10 @@
 - 中日双语显示（真正双语，非参考对照）：逐段交替（中文段 + 其日文段），可切 中日双语 / 仅中文 / 仅日文。日文按 block 1:1 存于 `source/ja/{vol}.blocks.json`，阅读器侧读入合并；中文仍是唯一时间线主轴、防剧透基准；核心 parser/validator/compiler/schema 不受影响。读侧逻辑抽到 `tools/src/readerView.ts`。
 - 界面合并：`npm run workbench` 同一服务器同时提供工作台（`/`）和阅读器（`/reader/`），共用同一份配置，顶栏互相跳转。
 - DeepSeek 长程 Phase A 实跑：历史工作副本 `/tmp/gt-longrange-4vol-final2` 已跑通 gray-tower `v01`-`v04`。当时使用的是旧模型名，复跑应按 `provider-adapters.md` 使用当前 `deepseek-v4-flash` / `deepseek-v4-pro`。每卷结束均 validate + compile 通过；实体复用、许映白身份伏笔回收、未寄出的名单长线、D 班点数弧线均成立。脱敏结果见 `modules/long-range-test-phase-a-2026-07-01.md`。
-- 真实 COTE 三卷本轮结果已收口为本机主数据包 `~/nc-workpack/cote-bilingual-v1`，后续不再重复清洗 / 日文匹配 / 起草 / 复核：
-  - v01 日文匹配：`source/ja/v01.blocks.json` 中故事正文 `3857/3857` 全覆盖；4 条中文译注进入 `review/ja_alignment_items.jsonl`，不强行匹配、不进入结构化抽取。
+- 真实 COTE 三卷当前清洗基线已收口为本机数据包 `~/nc-workpack/cote-cleaning-panel-recovered-2026-07-02`，用于下一轮清洗→起草→复核全流程真实测试：
+  - 清洗：v01/v02/v03 validate + compile passed，cleaning-readiness ready=true，72 张图均有图注，建议已裁决。
+  - 日文对照：日文 v01/v02/v03 已导入到同名 `__reference` 包，并写入 `source/ja/v01.blocks.json` / `v02.blocks.json` / `v03.blocks.json`。覆盖：v01 `3857/3857`，v02 `3904/3907`，v03 `3720/3720`。日文只用于阅读显示 / alignment 审计，不进入结构化抽取。
+  - 已知风险：当前 v02/v03 对照主要按章节强制重划分后顺序匹配，能把错位限制在章节内，但仍可能有串行 / 一对多 / 多对一结构差异；已写 `review/ja_alignment_items.jsonl`，本轮先不把日文匹配优化作为重点。
   - v02/v03 MiMo 清洗：14 个正文章节完成，36 条低风险建议全部应用；v02/v03 正文图片缺图注为 0，锚点有效。v01 此前一次 normalize 被回滚且未重跑，遗留 30 处场景分隔符残留段（旧文档误记为「用户确认基线」，实无此决策）；2026-07-02 已补跑 `normalize` 修复全部 30 处并重新 validate + compile 通过。
   - DeepSeek 起草 / 复核：v01-v03 最终 `validate` + `compile` passed，Accepted 283，review item 30，work_runs 53。起草使用 `deepseek-v4-flash`，复核使用 `deepseek-v4-pro`。
   - 实跑中暴露并修复两个生产级问题：真实长章 JSON 输出截断（候选数收敛到最多 15 条）；模型偶尔输出短 block id（候选入库前补全为当前章节完整 block id）。
