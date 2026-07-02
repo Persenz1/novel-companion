@@ -17,6 +17,7 @@ import {
   buildReviewerUser,
   type ChapterSection,
 } from "./prompts.js";
+import { isBodyChapterKind } from "../chapterKind.js";
 
 type Rec = Record<string, unknown>;
 
@@ -29,6 +30,16 @@ const REVIEW_CHAT_OPTIONS = { jsonMode: true, temperature: 0.1, maxTokens: 8192,
 
 function chapterKey(chapterId: string): string {
   return chapterId.replace(/[.]/g, "_");
+}
+
+function normalizeBlockRef(chapterId: string, blockId: unknown, valid: Set<string>, fallback: string): string {
+  const raw = String(blockId ?? "").trim();
+  if (valid.has(raw)) return raw;
+  if (/^b\d{4,}$/i.test(raw)) {
+    const full = `${chapterId}.${raw}`;
+    if (valid.has(full)) return full;
+  }
+  return fallback;
 }
 
 function nextSeqId(rows: Rec[], prefix: string): (n: number) => string {
@@ -59,6 +70,7 @@ function volumeForChapter(manifest: Manifest, chapterId: string): ManifestVolume
 /** 整卷正文按 manifest 章节顺序分段（作为完整背景），空章节跳过。 */
 function volumeSections(data: WorkbenchData, volume: ManifestVolume): ChapterSection[] {
   return volume.chapters
+    .filter((ch) => isBodyChapterKind(ch.kind))
     .map((ch) => ({ title: ch.title, blocks: data.blocksForChapter(ch.id) }))
     .filter((s) => s.blocks.length > 0);
 }
@@ -246,11 +258,16 @@ export async function runDraft(
   const taskId = `task_${chapterKey(chapterId)}_${Date.now().toString(36)}`;
   const firstId = targetBlocks[0]!.id;
   const lastId = targetBlocks[targetBlocks.length - 1]!.id;
+  const validTargetBlockIds = new Set(targetBlocks.map((b) => b.id));
 
   const created: Candidate[] = raw.map((r, i) => {
-    const span = (r.source_span as Candidate["source_span"]) ?? {
+    const rawSpan = (r.source_span as Candidate["source_span"]) ?? {
       start_block: firstId,
       end_block: firstId,
+    };
+    const span = {
+      start_block: normalizeBlockRef(chapterId, rawSpan.start_block, validTargetBlockIds, firstId),
+      end_block: normalizeBlockRef(chapterId, rawSpan.end_block, validTargetBlockIds, firstId),
     };
     const payload = (r.payload as Candidate["payload"]) ?? {};
     return {
@@ -259,7 +276,7 @@ export async function runDraft(
       type: String(r.type ?? payload.target_type ?? "entity"),
       block_id: span.start_block,
       source_span: span,
-      visible_from: String(r.visible_from ?? span.end_block),
+      visible_from: normalizeBlockRef(chapterId, r.visible_from ?? span.end_block, validTargetBlockIds, span.end_block),
       confidence: typeof r.confidence === "number" ? r.confidence : 0.6,
       status: "pending_review",
       model: res.model,

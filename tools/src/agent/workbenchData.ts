@@ -6,6 +6,7 @@
 import { FileStore } from "../fileStore.js";
 import { ACCEPTED_TYPE_FILES } from "../acceptedTypes.js";
 import type { Asset, AssetAnchor, Block, Candidate, Manifest, Scene } from "../types.js";
+import { isBodyChapterKind } from "../chapterKind.js";
 
 type Rec = Record<string, unknown>;
 
@@ -134,7 +135,9 @@ export class WorkbenchData {
     const chapterOrder = new Map<string, number>();
     const manifest = this.manifest();
     manifest.volumes.forEach((v, vi) => {
-      for (const ch of v.chapters) chapterOrder.set(ch.id, vi * 100000 + ch.order * 1000);
+      for (const ch of v.chapters) {
+        if (isBodyChapterKind(ch.kind)) chapterOrder.set(ch.id, vi * 100000 + ch.order * 1000);
+      }
     });
     const sorted = [...this.blocks()].sort((a, b) => {
       const ca = chapterOrder.get(a.chapter_id) ?? 0;

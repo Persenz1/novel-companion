@@ -1,5 +1,6 @@
 import { FileStore } from "../fileStore.js";
 import type { Asset, AssetAnchor, Block, Manifest, ManifestChapter } from "../types.js";
+import { isBodyChapterKind } from "../chapterKind.js";
 
 type Rec = Record<string, unknown>;
 
@@ -75,6 +76,7 @@ export function prepareMimoCleaningInputs(store: FileStore, volumeId?: string): 
   for (const volume of manifest.volumes) {
     if (volumeId && volume.id !== volumeId) continue;
     for (const chapter of [...volume.chapters].sort((a, b) => a.order - b.order)) {
+      if (!isBodyChapterKind(chapter.kind)) continue;
       const chapterBlocks = blocks
         .filter((block) => block.chapter_id === chapter.id)
         .sort((a, b) => a.order - b.order);

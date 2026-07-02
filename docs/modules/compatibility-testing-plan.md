@@ -1,5 +1,7 @@
 # 规划：真实 EPUB 极端兼容性测试
 
+本文件是长期兼容性矩阵。当前真实书籍主线测试另见 `real-book-bilingual-long-range-test.md`：中文作为故事主轴，日文只做中日匹配与阅读器渲染，并验证第 2/3 卷带前文结构化信息的起草 / 复核。
+
 清洗数据是下游一切的地基（见 `cleaning-pipeline-v2-design.md`）。gray-tower 是受控原创夹具，覆盖不了真实书的千奇百怪。本规划用不断扩充的真实 EPUB 语料（`samples/real-epubs/`，本地不入库）系统性地压兼容性。
 
 ## 目标
@@ -13,7 +15,7 @@
 
 ### A. 结构形态
 - [x] 标准 EPUB3 + duokan 扩展（语料 1 COTE）
-- [ ] 日文原版（竖排、假名注音 `<ruby>`、日文引号）
+- [x] 日文原版 v01 作为匹配源（语料 2：竖排/RTL spine、假名注音 `<ruby>`、日文引号、固定版式页；已用于 COTE v01 日文匹配）
 - [ ] 跨文件章节（一章拆多个 xhtml / 多章合一个 xhtml）
 - [ ] 异常导航：仅 `.ncx` 无 nav、nav 与 spine 不一致、无目录
 - [ ] EPUB2、非 duokan 排版、其它厂商扩展
@@ -32,14 +34,14 @@
 - [ ] 图注已在正文（需识别并关联，而非再生成 alt）
 
 ### D. 多卷 / 整本
-- [x] 多个单卷 EPUB append 为一本（COTE 1-1/1-2/1-3 → v01/v02/v03）
+- [x] 多个单卷 EPUB append 为一本（COTE 1-1/1-2/1-3，用户确认对应中文 v01/v02/v03）
 - [ ] 单个 EPUB 内含多卷、合集本拆卷
 - [ ] 跨卷实体/线索一致性（清洗后接长程起草复核）
 
 ### E. 全链贯通
-- [ ] 每本：import → normalize → MiMo → ingest → 裁决 → apply → readiness 绿 → compile → 阅读
-- [ ] 非正文页从阅读时间线剔除（P2：timeline 按 `isBodyChapterKind` 过滤）
-- [ ] 阅读器渲染 image / 空文本 block（显示层待验证）
+- [x] COTE v01-v03：import → normalize/MiMo → ingest → apply → compile → 阅读器基线；v01 清洗按既有测试结果保留，不重复改动
+- [x] 非正文页从阅读时间线剔除（timeline / readerView / MiMo feed / agent 背景按 `isBodyChapterKind` 过滤）
+- [x] 阅读器渲染中日双语正文，目录默认展开；图片显示仍需在后续阅读器制作作业中继续审阅
 
 ## 每本书的测试流程（清单）
 
@@ -63,6 +65,6 @@
 ## 里程碑
 
 1. **M1 单语中译（已达成）**：COTE 三卷 import+normalize+图注+收口闭环跑通。
-2. **M2 日文原版**：ruby/竖排/日文标点，双语 `source/ja` 对齐进 importer。
+2. **M2 日文原版（已达成 v01 匹配基线）**：语料 2 已用于 COTE v01 日文匹配，故事正文覆盖 `3857/3857`；后续重点转向日文 v02/v03 语料补齐与匹配 UI。
 3. **M3 结构地狱**：脚注/表格/跨文件章节/异常 nav 各来一本，importer 显式报缺陷。
-4. **M4 整本贯通**：一本真实书从 EPUB 一路到防剧透阅读，readiness 全绿 + 长程起草复核。
+4. **M4 整本贯通（COTE v01-v03 已达成本轮基线）**：真实书从 EPUB 到防剧透阅读、日文匹配、清洗、长程起草复核已跑通；下一步转阅读器角色卡 / 时间线 / 说话人作业。

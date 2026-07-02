@@ -72,6 +72,7 @@ function resetWorkspace() {
   $("#asset-list").replaceChildren(el("div", "empty", "导入 EPUB 后显示图片"));
   renderOutput({ parsed: { suggestions: [], summary: "导入 EPUB 后显示清洗建议" } });
   $("#tab-queue").replaceChildren(el("div", "empty", "导入 EPUB 后可裁决清洗建议"));
+  $("#tab-usage").replaceChildren(el("div", "empty", "导入 EPUB 后显示本轮用量"));
 }
 
 async function autoClean() {
@@ -251,6 +252,10 @@ function fmtPct(v) {
 
 async function loadUsage() {
   const body = $("#tab-usage");
+  if (!state.activeBookpack) {
+    body.replaceChildren(el("div", "empty", "导入 EPUB 后显示本轮用量"));
+    return;
+  }
   body.replaceChildren(el("div", "empty", "加载中…"));
   try {
     const usage = await api("/api/usage");
@@ -262,30 +267,24 @@ async function loadUsage() {
 
 function renderUsage(body, usage) {
   body.replaceChildren();
-  body.appendChild(usageSummary(usage.total));
-  const buckets = el("div", "usage-buckets");
-  for (const b of usage.buckets || []) buckets.appendChild(usageBucket(b));
-  body.appendChild(buckets);
-  const recent = el("div", "usage-recent");
-  recent.appendChild(el("h3", null, "最近调用"));
-  if (!usage.recent?.length) {
-    recent.appendChild(el("div", "empty", "暂无模型用量记录"));
-  } else {
-    for (const r of usage.recent) recent.appendChild(usageRecentRow(r));
-  }
-  body.appendChild(recent);
+  const total = usage.total || {};
+  body.appendChild(usageSummary(total));
+  body.appendChild(usageStagePanel(usage.stages || [], total));
+  body.appendChild(usageModelPanel(usage.buckets || []));
 }
 
 function usageSummary(u) {
   const card = el("div", "usage-summary");
   card.append(
     usageMetric("调用", fmtNum(u.calls)),
+    usageMetric("总量", fmtNum(u.total_tokens)),
     usageMetric("输入", fmtNum(u.prompt_tokens)),
+    usageMetric("缓存率", fmtPct(u.prompt_cache_hit_ratio)),
     usageMetric("命中", fmtNum(u.prompt_cache_hit_tokens)),
     usageMetric("未命中", fmtNum(u.prompt_cache_miss_tokens)),
     usageMetric("输出", fmtNum(u.completion_tokens)),
     usageMetric("推理", fmtNum(u.reasoning_tokens)),
-    usageMetric("缓存率", fmtPct(u.prompt_cache_hit_ratio)),
+    usageMetric("图片", fmtNum(u.image_tokens)),
   );
   return card;
 }
@@ -296,14 +295,56 @@ function usageMetric(label, value) {
   return box;
 }
 
-function usageBucket(b) {
-  const card = el("div", "usage-bucket");
-  card.appendChild(el("div", "usage-bucket-title", `${b.label} · ${b.calls} 次`));
+function usageStagePanel(stages, total) {
+  const panel = el("div", "usage-panel");
+  panel.appendChild(el("h3", null, "阶段总览"));
+  if (!stages.length) {
+    panel.appendChild(el("div", "empty compact", "暂无阶段用量"));
+    return panel;
+  }
+  const max = Math.max(...stages.map((s) => Number(s.total_tokens || 0)), 1);
+  for (const s of stages) panel.appendChild(usageStageCard(s, max, total));
+  return panel;
+}
+
+function usageStageCard(b, max, total) {
+  const card = el("div", `usage-stage source-${b.source || "all"}`);
+  const head = el("div", "usage-stage-head");
+  head.append(el("strong", null, `${b.label} · ${fmtNum(b.calls)} 次`), el("span", null, fmtNum(b.total_tokens)));
+  card.appendChild(head);
+  card.appendChild(usageBar(Number(b.total_tokens || 0), max, "total"));
+  card.appendChild(usageCacheStack(b));
+  const share = total?.total_tokens ? Number(b.total_tokens || 0) / Number(total.total_tokens) : null;
   card.appendChild(
     el(
       "div",
       "usage-line",
-      `输入 ${fmtNum(b.prompt_tokens)} / 命中 ${fmtNum(b.prompt_cache_hit_tokens)} / 未命中 ${fmtNum(b.prompt_cache_miss_tokens)} / 缓存率 ${fmtPct(b.prompt_cache_hit_ratio)}`,
+      `占比 ${fmtPct(share)} · 输入 ${fmtNum(b.prompt_tokens)} · 输出 ${fmtNum(b.completion_tokens)} · 推理 ${fmtNum(b.reasoning_tokens)} · 图片 ${fmtNum(b.image_tokens)}`,
+    ),
+  );
+  return card;
+}
+
+function usageModelPanel(buckets) {
+  const panel = el("div", "usage-panel");
+  panel.appendChild(el("h3", null, "模型拆分"));
+  if (!buckets.length) {
+    panel.appendChild(el("div", "empty compact", "暂无模型用量"));
+    return panel;
+  }
+  for (const b of buckets) panel.appendChild(usageBucket(b));
+  return panel;
+}
+
+function usageBucket(b) {
+  const card = el("div", "usage-bucket");
+  card.appendChild(el("div", "usage-bucket-title", `${b.label} · ${b.calls} 次`));
+  card.appendChild(usageCacheStack(b));
+  card.appendChild(
+    el(
+      "div",
+      "usage-line",
+      `总量 ${fmtNum(b.total_tokens)} · 输入 ${fmtNum(b.prompt_tokens)} · 缓存率 ${fmtPct(b.prompt_cache_hit_ratio)}`,
     ),
   );
   card.appendChild(
@@ -316,17 +357,34 @@ function usageBucket(b) {
   return card;
 }
 
-function usageRecentRow(r) {
-  const row = el("div", "usage-row");
-  row.appendChild(el("div", "usage-row-title", `${r.source} · ${r.stage} · ${r.chapter_id || r.file || ""}`));
-  row.appendChild(
-    el(
-      "div",
-      "usage-line",
-      `输入 ${fmtNum(r.prompt_tokens)}（命中 ${fmtNum(r.prompt_cache_hit_tokens)} / 未命中 ${fmtNum(r.prompt_cache_miss_tokens)}） · 输出 ${fmtNum(r.completion_tokens)} · 推理 ${fmtNum(r.reasoning_tokens)} · 图片 ${fmtNum(r.image_tokens)} · 总计 ${fmtNum(r.total_tokens)}`,
-    ),
-  );
-  return row;
+function usageBar(value, max, kind) {
+  const track = el("div", `usage-bar ${kind || ""}`);
+  const fill = el("div", "usage-bar-fill");
+  fill.style.width = `${Math.max(2, Math.min(100, (Number(value || 0) / Math.max(1, Number(max || 1))) * 100))}%`;
+  track.appendChild(fill);
+  return track;
+}
+
+function usageCacheStack(u) {
+  const prompt = Number(u.prompt_tokens || 0);
+  const hit = Number(u.prompt_cache_hit_tokens || 0);
+  const miss = Number(u.prompt_cache_miss_tokens || 0);
+  const uncategorized = Math.max(0, Number(u.prompt_uncategorized_tokens || 0));
+  const wrap = el("div", "usage-cache");
+  const track = el("div", "usage-cache-track");
+  const addSeg = (cls, value, label) => {
+    if (!prompt || value <= 0) return;
+    const seg = el("span", cls);
+    seg.style.width = `${Math.max(1, (value / prompt) * 100)}%`;
+    seg.title = `${label} ${fmtNum(value)}`;
+    track.appendChild(seg);
+  };
+  addSeg("hit", hit, "缓存命中");
+  addSeg("miss", miss, "缓存未命中");
+  addSeg("uncat", uncategorized, "未分类输入");
+  wrap.appendChild(track);
+  wrap.appendChild(el("div", "usage-line", `命中 ${fmtNum(hit)} / 未命中 ${fmtNum(miss)} / 未分类 ${fmtNum(uncategorized)}`));
+  return wrap;
 }
 
 function suggestionCard(s) {

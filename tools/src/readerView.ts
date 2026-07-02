@@ -5,6 +5,7 @@
 // 来自 source/ja/{volume}.blocks.json，不建立独立阅读进度（docs/modules/reader.md）。
 import { FileStore } from "./fileStore.js";
 import type { Asset, AssetAnchor, Block, Manifest } from "./types.js";
+import { isBodyChapterKind } from "./chapterKind.js";
 
 type Rec = Record<string, unknown>;
 
@@ -52,6 +53,7 @@ export function buildReaderBook(store: FileStore): Rec {
     sections.push({ type: "volume", id: volume.id, title: volume.title });
     const chapters = [...volume.chapters].sort((a, b) => a.order - b.order);
     for (const chapter of chapters) {
+      if (!isBodyChapterKind(chapter.kind)) continue;
       sections.push({ type: "chapter", id: chapter.id, title: chapter.title, kind: chapter.kind });
       const chBlocks = blocksByChapter.get(chapter.id) ?? [];
       toc.push({

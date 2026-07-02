@@ -212,7 +212,8 @@ function usageImageTokens(usage: Rec): number {
 function addUsage(bucket: UsageBucket, usage: Rec | null | undefined): void {
   if (!usage) return;
   const prompt = num(usage.prompt_tokens);
-  const hit = num(usage.prompt_cache_hit_tokens);
+  const promptDetails = usage.prompt_tokens_details as Rec | undefined;
+  const hit = num(usage.prompt_cache_hit_tokens) || num(promptDetails?.cached_tokens);
   const miss = num(usage.prompt_cache_miss_tokens);
   const completion = num(usage.completion_tokens);
   const reasoning = usageReasoningTokens(usage);
@@ -238,7 +239,7 @@ function finalizeUsage(bucket: UsageBucket): UsageBucket {
 function aggregateUsage(store: FileStore): Rec {
   const total = emptyUsageBucket("total", "总计", "all");
   const buckets = new Map<string, UsageBucket>();
-  const recent: Rec[] = [];
+  const stages = new Map<string, UsageBucket>();
 
   const bucketFor = (key: string, label: string, source: string): UsageBucket => {
     const found = buckets.get(key);
@@ -247,20 +248,28 @@ function aggregateUsage(store: FileStore): Rec {
     buckets.set(key, created);
     return created;
   };
+  const stageLabel = (source: string, stage: string): string => {
+    if (stage === "ja_alignment") return "匹配";
+    if (source === "cleaning") return "清洗";
+    if (stage === "draft") return "起草";
+    if (stage === "review") return "复核";
+    return stage;
+  };
+  const stageFor = (source: string, stage: string): UsageBucket => {
+    const key = `${source}:${stage}`;
+    const found = stages.get(key);
+    if (found) return found;
+    const created = emptyUsageBucket(key, stageLabel(source, stage), source);
+    stages.set(key, created);
+    return created;
+  };
   const record = (bucket: UsageBucket, usage: Rec | null | undefined, detail: Rec): void => {
     if (!usage) return;
+    const source = String(detail.source ?? bucket.source);
+    const stage = String(detail.stage ?? "unknown");
     addUsage(total, usage);
     addUsage(bucket, usage);
-    recent.push({
-      ...detail,
-      prompt_tokens: num(usage.prompt_tokens),
-      prompt_cache_hit_tokens: num(usage.prompt_cache_hit_tokens),
-      prompt_cache_miss_tokens: num(usage.prompt_cache_miss_tokens),
-      completion_tokens: num(usage.completion_tokens),
-      reasoning_tokens: usageReasoningTokens(usage),
-      total_tokens: num(usage.total_tokens),
-      image_tokens: usageImageTokens(usage),
-    });
+    addUsage(stageFor(source, stage), usage);
   };
 
   for (const run of store.readJsonl<Rec>("reports/work_runs.jsonl").rows) {
@@ -296,10 +305,31 @@ function aggregateUsage(store: FileStore): Rec {
     }
   }
 
+  for (const file of store.listDir("reports/ja_alignment_mimo_outputs").filter((name) => name.endsWith(".json")).sort()) {
+    try {
+      const out = store.readJson<Rec>(`reports/ja_alignment_mimo_outputs/${file}`);
+      const model = String(out.model ?? "unknown-model");
+      record(bucketFor(`alignment:mimo:${model}`, `匹配 · ${model}`, "alignment"), out.usage as Rec | undefined, {
+        source: "alignment",
+        stage: "ja_alignment",
+        model,
+        chapter_id: out.chapter_id,
+        file,
+      });
+    } catch {
+      /* Ignore malformed historical output files; validator handles bookpack correctness. */
+    }
+  }
+
   return {
     total: finalizeUsage(total),
-    buckets: [...buckets.values()].map(finalizeUsage),
-    recent: recent.slice(-40).reverse(),
+    stages: [...stages.values()]
+      .map(finalizeUsage)
+      .sort((a, b) => {
+        const order: Record<string, number> = { "alignment:ja_alignment": 0, "cleaning:mimo_cleaning": 1, "agent:draft": 2, "agent:review": 3 };
+        return (order[a.key] ?? 99) - (order[b.key] ?? 99) || b.total_tokens - a.total_tokens;
+    }),
+    buckets: [...buckets.values()].map(finalizeUsage).sort((a, b) => b.total_tokens - a.total_tokens),
   };
 }
 

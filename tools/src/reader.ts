@@ -5,7 +5,7 @@
 // read_boundary 是唯一可见边界，current_block 只决定当前位置相关性。
 //
 // 启动：
-//   npm run reader                       （默认读 ../samples/gray-tower）
+//   npm run reader                       （默认读 NC_BOOKPACK 或本地样例包）
 //   npx tsx src/reader.ts <bookpack-dir> （显式指定数据包目录）
 //   NC_BOOKPACK=<dir> NC_PORT=4174 npm run reader
 import http from "node:http";

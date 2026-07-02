@@ -48,8 +48,17 @@ Agent 模块：
 - `/api/compile`
 - `/api/changes`
 - `/api/revert`
+- `/api/usage`
 - `/api/book`
 - `/api/context`
+
+用量仪表盘：
+
+- 工作台 `/` 和清洗页 `/cleaning/` 的「用量」页签共用 `/api/usage`。
+- 数据来源：`reports/work_runs.jsonl`（起草 / 复核）和 `reports/cleaning_mimo_outputs/*.json`（清洗 MiMo）。
+- 展示：总 token、输入、缓存命中 / 未命中、输出、推理、图片 token、缓存率。
+- 维度：阶段总览（清洗 / 起草 / 复核）、模型拆分。
+- 目标：真实书籍长程处理时能直观看到成本主要烧在清洗、起草还是复核，以及 DeepSeek cache 命中是否改善。
 
 ## 当前上下文策略
 
@@ -93,7 +102,7 @@ Agent 模块：
 - 真实书籍长程制作压测。
 - Phase B 前文上下文压缩 / 检索（gray-tower Phase A 暂不阻塞）。
 - 任意 scene / block range / 整卷作业。
-- token 预算器。
+- token 预算器（用量仪表盘已能观测实际消耗，但还不能在调用前预算/截断）。
 - LLM JSON schema 修复与重试。
 - 复核 decision log 或 `review_runs`。
 - draft / review 后不自动 validate / compile；工作台已有 `POST /api/compile` 和按钮，但仍由用户在阶段收口时触发。

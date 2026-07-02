@@ -4,7 +4,7 @@
 
 当前工具链覆盖解析器、校验器、测试夹具、编译器、查询器、EPUB 清洗最小可用版本，以及清洗后制作阶段的数据工作台（`npm run workbench`）。工作台按 `docs/modules/ai-workbench.md` 实现：AI 起草 + 独立 AI 复核自动落盘 + 人审计异常。
 
-状态边界：工作台、最低限度阅读器界面和 `/cleaning/` 一键清洗已实现；gray-tower 4 卷 DeepSeek A 阶段长程压力已跑通。仓库自动测试不调用模型、不需要 API 密钥；真实（版权）书籍长程制作、复杂 EPUB 兼容性、DeepSeek 缓存成本优化，以及 B 阶段前卷上下文压缩 / 检索仍未完成。
+状态边界：工作台、最低限度阅读器界面和 `/cleaning/` 一键清洗已实现；gray-tower 4 卷 DeepSeek A 阶段长程压力已跑通；真实 COTE v01-v03 的清洗、v01 日文匹配、DeepSeek 起草/复核已经合并为本机结果包 `~/nc-workpack/cote-bilingual-v1`。仓库自动测试不调用模型、不需要 API 密钥；复杂 EPUB 兼容性、阅读器制作作业、DeepSeek/MiMo usage 对账与缓存成本优化，以及 B 阶段前卷上下文压缩 / 检索仍未完成。
 
 ## 环境
 
@@ -87,7 +87,7 @@ npx tsx src/cli.ts prepare-mimo /tmp/gray-tower-imported
 npx tsx src/cli.ts run-mimo-cleaning /tmp/gray-tower-imported reports/cleaning_mimo_inputs/v01.c01.json
 ```
 
-当前限制：MiMo 通用建议只写报告和界面展示，尚未批量安全写回 Markdown / manifest；真实 EPUB 的复杂目录、脚注和跨文件章节合并仍需增强。
+当前限制：MiMo 通用建议可通过 ingest/apply 批量写回 Markdown / manifest，并带快照回滚；split_block / merge_blocks 仍需人工处理。真实 EPUB 的复杂目录、脚注和跨文件章节合并仍需增强。
 
 ## 阅读器（只读，防剧透 + 中日双语）
 
@@ -112,11 +112,11 @@ cd tools
 npx tsx scripts/long-range-phase-a.ts --run-model --work /tmp/gt-longrange-4vol --volumes v01,v02,v03,v04 --force
 ```
 
-已完成结果见 `docs/modules/long-range-test-phase-a-2026-07-01.md`。该结果证明 gray-tower 上「全局 Accepted + 当前卷正文」足以支撑主线连续性；批量 review item 裁决入口已补齐，B 阶段暂不阻塞当前推进。
+已完成 gray-tower 结果见 `docs/modules/long-range-test-phase-a-2026-07-01.md`。真实 COTE v01-v03 结果见 `docs/modules/real-book-bilingual-long-range-test.md`，当前主数据包为 `~/nc-workpack/cote-bilingual-v1`，后续不再重复清洗 / 匹配 / 起草 / 复核。
 
 ## 待实现
 
-真实书籍长程压测、复杂 EPUB 兼容性、DeepSeek 缓存成本优化、批量合并同名实体、B 阶段跨卷前文上下文的梗概 / 预算器 / 可选 RAG、`AgentStore` 的更新 / 合并 / 废弃完整回滚语义。
+阅读器制作作业（角色卡 / 时间线 / 说话人）、复杂 EPUB 兼容性、DeepSeek/MiMo usage 对账与缓存成本优化、批量合并同名实体、B 阶段跨卷前文上下文的梗概 / 预算器 / 可选 RAG、`AgentStore` 的更新 / 合并 / 废弃完整回滚语义。
 
 ## 开发
 

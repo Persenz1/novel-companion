@@ -35,6 +35,13 @@ npx tsx src/reader.ts <bookpack-dir>   # 独立阅读器指定数据包
 
 日文是每个 block 的 1:1 并列正文，不是可隐藏的脚注。存储在 `source/ja/{volume}.blocks.json`（`block_id -> 日文`），由阅读器侧 `/api/book` 合并出 `text_ja` 并逐段交替渲染。中文正文仍是唯一时间线主轴与防剧透基准，日文不建立独立阅读进度。核心 parser / validator / compiler / 数据 schema 不受影响（双语是阅读器侧读入的授权文本）。
 
+真实书籍测试里的原则更窄：
+
+- 日文只用于匹配和显示，不用于抽取实体、事实、事件、关系、数值或说话人。
+- 翻译组信息、广告、版权、目录、奥付、BookWalker 等场外信息不进入故事阅读流，也不要求日文匹配。
+- 如果中文 block 没有日文匹配，阅读器显示中文即可；这不是防剧透或数据处理错误。
+- 仅日文模式也必须沿用中文 block id、中文章节顺序和中文 `read_boundary`。
+
 ## 验收
 
 - 慢速阅读会推进 read boundary。
@@ -43,6 +50,9 @@ npx tsx src/reader.ts <bookpack-dir>   # 独立阅读器指定数据包
 - 手动确认后，右侧增强数据更新。
 - 返回 read boundary 可回到已读边界附近。
 - 日文参考只在开启时显示。
+- 双语切换不改变 read boundary。
+- 非故事章节不参与连续阅读推进。
+- 长日文段、缺失日文段、图片页和空文本 image block 不破坏正文布局。
 
 ## 非目标
 

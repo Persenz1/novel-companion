@@ -117,11 +117,11 @@ HTTP（server.ts）：`POST /api/cleaning/normalize`、`POST /api/cleaning/inges
 
 UI：`/cleaning/` 新增「裁决队列」页——工具条（规范化 / 取入 / 应用全部低风险）、收口清单、逐条建议（图片类显示图 + 可编辑图注，其它类显示 block 预览，接受/拒绝/应用）、变更历史（可回滚）。
 
-真实 COTE 1-1 验证：章节 kind 全部正确归类；normalize 把 30 个孤立数字 block 归 separator；MiMo 新 prompt 产出纯中文图注（认出主角名）；ingest→apply→写回 Markdown→reparse→validate→readiness 全链通；回滚可逆；tsc 干净、node:test 24/24。
+真实 COTE 验证：v01/v02/v03 章节 kind 正确归类；v02/v03 MiMo 清洗 14 个正文章节、36 条低风险建议全部应用，正文图片缺图注为 0；v01 清洗按既有测试结果保留不重复改动；ingest→apply→写回 Markdown→reparse→validate→compile 全链通；回滚可逆；tsc 干净。
 
 ## 仍未做（P2）
 
 - split_block / merge_blocks 自动写回（当前人工）。
-- 非正文页从阅读时间线剔除（现已分类 kind，但 timeline 尚未按 `isBodyChapterKind` 过滤）。
+- split_block / merge_blocks 自动化仍未实现（当前人工）。
 - 图片主体识别 → asset_subject（配名册认人）。
 - 整本多卷汇总的作业编排。

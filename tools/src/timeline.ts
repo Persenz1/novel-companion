@@ -11,6 +11,7 @@
 // comparable here and must be mapped to a body position before they can drive
 // reader queries.
 import type { Block, Manifest } from "./types.js";
+import { isBodyChapterKind } from "./chapterKind.js";
 
 export type PositionKind =
   | "volume_start"
@@ -54,6 +55,7 @@ export function buildTimeline(manifest: Manifest, blocks: Block[]): Timeline {
     push(`${volume.id}.start`, "volume_start");
     const chapters = [...volume.chapters].sort((a, b) => a.order - b.order);
     for (const chapter of chapters) {
+      if (!isBodyChapterKind(chapter.kind)) continue;
       push(`${chapter.id}.start`, "chapter_start");
       for (const block of blocksByChapter.get(chapter.id) ?? []) {
         push(block.id, "block");

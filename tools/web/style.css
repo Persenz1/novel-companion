@@ -202,13 +202,33 @@ textarea.epub-input { min-height: 118px; font-family: ui-monospace, monospace; }
 }
 .usage-label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 3px; }
 .usage-metric strong { font-size: 16px; }
-.usage-buckets, .usage-recent { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-.usage-recent h3 { font-size: 13px; margin: 6px 0 0; }
-.usage-bucket, .usage-row {
+.usage-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.usage-panel h3 { font-size: 13px; margin: 6px 0 0; }
+.usage-stage, .usage-bucket {
   border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 9px 10px;
 }
-.usage-bucket-title, .usage-row-title { font-weight: 600; margin-bottom: 5px; }
+.usage-stage.source-cleaning { border-left: 4px solid var(--green); }
+.usage-stage.source-agent { border-left: 4px solid var(--accent); }
+.usage-stage-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px;
+}
+.usage-stage-head strong, .usage-stage-head span { min-width: 0; overflow-wrap: anywhere; }
+.usage-stage-head span { color: var(--muted); font-family: ui-monospace, monospace; font-size: 12px; }
+.usage-bucket-title { font-weight: 600; margin-bottom: 5px; }
 .usage-line { color: var(--muted); font-size: 12px; line-height: 1.55; }
+.usage-bar {
+  height: 8px; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; background: #eef1f5; margin: 4px 0 8px;
+}
+.usage-bar-fill { display: block; height: 100%; background: var(--accent); }
+.usage-cache { margin: 6px 0; }
+.usage-cache-track {
+  display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: #eef1f5; border: 1px solid var(--line);
+}
+.usage-cache-track span { display: block; min-width: 1px; }
+.usage-cache-track .hit { background: var(--green); }
+.usage-cache-track .miss { background: var(--red); }
+.usage-cache-track .uncat { background: #98a2b3; }
+.empty.compact { padding: 14px 10px; }
 .asset-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;
 }

@@ -16,9 +16,9 @@ Markdown 阅读器已实现并**与工作台合并**（`tools/`，`npm run workb
 
 样例卷 `samples/gray-tower` 已扩为 **4 卷中日双语**，埋有跨卷线索（实体复用、点数弧线、许映白身份伏笔卷 3 回收）。DeepSeek A 阶段四卷长程压力已跑通：全局 Accepted 结构化记忆 + 当前卷正文足以支撑主线连续性，结果见 [长程 A 阶段结果](docs/modules/long-range-test-phase-a-2026-07-01.md)。
 
-清洗模块已从“已切好的 Markdown 包”推进到 **EPUB → 完美清洗数据** 的完整流水线 v2：忠实解包 importer + 确定性规范化 normalizer（孤立数字场景分隔、强信号非正文页归类）+ AI 清洗建议（MiMo）+ 人裁决应用器（写回 Markdown/manifest、reparse+validate、失败自动回滚、可审计 change）+ 收口 gate。`/cleaning/` 页含「裁决队列」（看图/看上下文裁决、一键规范化/应用、回滚、收口清单）。已用真实商业 EPUB（COTE 中译第 1 卷分三册）端到端验证：三卷导入、章节 kind 分类、88 处场景分隔规范化、纯中文图注、ingest→apply→收口闭环、回滚可逆均通过。设计与落点见 [清洗流水线 v2](docs/modules/cleaning-pipeline-v2-design.md)。
+清洗模块已从“已切好的 Markdown 包”推进到 **EPUB → 完美清洗数据** 的完整流水线 v2：忠实解包 importer + 确定性规范化 normalizer（孤立数字场景分隔、强信号非正文页归类）+ AI 清洗建议（MiMo）+ 人裁决应用器（写回 Markdown/manifest、reparse+validate、失败自动回滚、可审计 change）+ 收口 gate。`/cleaning/` 页含「裁决队列」（看图/看上下文裁决、一键规范化/应用、回滚、收口清单）。已用真实商业 EPUB（COTE 中译 v01/v02/v03 + 日文原版 v01）端到端验证：三卷导入、章节 kind 分类、v01 日文故事正文 100% 匹配、v02/v03 MiMo 清洗建议全应用、起草/复核后 Accepted 283、validate/compile 通过。设计与落点见 [清洗流水线 v2](docs/modules/cleaning-pipeline-v2-design.md) 与 [真实书籍测试](docs/modules/real-book-bilingual-long-range-test.md)。
 
-尚未完成：更多真实 EPUB 的极端兼容性测试（日文原版 / 脚注 / 跨文件章节 / 异常 nav，见 [兼容性测试规划](docs/modules/compatibility-testing-plan.md)）、split/merge 建议自动化、非正文页从阅读时间线剔除、真实书籍长程压测、DeepSeek 缓存成本优化、同名实体批量合并，以及更新 / 合并 / 废弃操作的完整回滚语义。
+尚未完成：更多真实 EPUB 的极端兼容性测试（脚注 / 跨文件章节 / 异常 nav，见 [兼容性测试规划](docs/modules/compatibility-testing-plan.md)）、split/merge 建议自动化、角色卡 / 时间线 / 说话人等阅读器制作作业、DeepSeek/MiMo 控制台与本地 usage 对账、缓存成本优化、同名实体批量合并，以及更新 / 合并 / 废弃操作的完整回滚语义。
 
 ## 核心理念
 

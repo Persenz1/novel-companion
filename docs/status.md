@@ -25,12 +25,18 @@
 - 多模态识图：config 加 `vision` 角色（OpenAI 兼容，如 MiMo `mimo-v2.5`）；`llm.chat` 支持图文混合内容 + `imagePart()` + 双鉴权头（Bearer/api-key）；`nc describe-image <path>` CLI 可对任意图跑识别。
 - 清洗工作台：`/cleaning/` 页 + `tools/src/cleaning/*`。当前主入口是“填 EPUB 路径 -> 开始自动清洗”：可填单本 EPUB，也可多行填多个单卷 EPUB，系统按卷号 / 输入顺序导入到同一 bookpack，自动 parse + validate、生成全书 MiMo 章节任务、逐章调用 MiMo 并展示进度和建议。图片 alt 标注仍保留，人工确认后 `POST /api/cleaning/set-alt` 写回卷 Markdown 的 asset 标记并重解析。图片身份在**清洗阶段**定死，操作阶段（纯文本 DeepSeek）直接信任，不把多模态接进 agent。已用真实插图验证（单人/五人群像按名册认人正确）。**清洗→起草→复核→批量裁决→compile→阅读 一条龙已端到端跑通**（工作副本上：MiMo 标注图片→写回 Markdown→reparse→起草复核→compile→阅读器右栏显示确认后的图注）。
 - 配置形态（对齐 DeepSeek 官方文档）：base_url 用 `https://api.deepseek.com`，起草 `deepseek-v4-flash`、复核 `deepseek-v4-pro`（旧 `deepseek-chat` / `deepseek-reasoner` 将于 2026/07/24 弃用）；设置面板新增「识图模型」栏，MiMo 可在界面直接配置，无需手改 `.workbench-config.json`。`llm.chat` 区分 `max_tokens`（DeepSeek 等）与 `max_completion_tokens`（MiMo 等推理模型）两套上限，起草调用固定 `max_tokens=8192` 防多候选 JSON 被 4096 默认值截断。DeepSeek / MiMo 默认开启 thinking，但应用层只读取最终 `content`，不展示、不保存推理正文。工作副本建议放在 `/tmp` 之外的持久目录（如 `~/nc-workpack/gray-tower`），避免重启清空 `/tmp` 后数据包丢失。
-- 用量计费器：`GET /api/usage` 聚合 `reports/work_runs.jsonl` 与 `reports/cleaning_mimo_outputs/*.json`，工作台和清洗页右侧「用量」页签按阶段 + 模型拆分显示输入、缓存命中 / 未命中、输出、推理、图片 token 和缓存命中率；当前只记录 token 原始账本，不硬编码供应商单价。
+- 用量计费器：`GET /api/usage` 聚合 `reports/work_runs.jsonl`、`reports/cleaning_mimo_outputs/*.json` 与 `reports/ja_alignment_mimo_outputs/*.json`，工作台和清洗页右侧「用量」页签按匹配 / 清洗 / 起草 / 复核阶段 + 模型拆分显示输入、缓存命中 / 未命中、输出、推理、图片 token 和缓存命中率；当前只记录 token 原始账本，不硬编码供应商单价。供应商控制台与本地 usage 账本存在明显口径差异，后续需单独做 request_id 级别 usage audit。
 - 回滚入口：单 Change / 整批 work_run。
 - Markdown 阅读器：`tools/src/reader.ts` + `tools/web/reader/`。阅读标尺推算 `current_block`，连续阅读推进 `read_boundary`，跳读 / 目录跳转 / 大幅拖动不推进，也可鼠标点选 block；右侧面板按 `read_boundary` 调 `getVisibleContext`，越界时提示预览。目录为推开式独立栏，不遮挡正文。
 - 中日双语显示（真正双语，非参考对照）：逐段交替（中文段 + 其日文段），可切 中日双语 / 仅中文 / 仅日文。日文按 block 1:1 存于 `source/ja/{vol}.blocks.json`，阅读器侧读入合并；中文仍是唯一时间线主轴、防剧透基准；核心 parser/validator/compiler/schema 不受影响。读侧逻辑抽到 `tools/src/readerView.ts`。
 - 界面合并：`npm run workbench` 同一服务器同时提供工作台（`/`）和阅读器（`/reader/`），共用同一份配置，顶栏互相跳转。
 - DeepSeek 长程 Phase A 实跑：历史工作副本 `/tmp/gt-longrange-4vol-final2` 已跑通 gray-tower `v01`-`v04`。当时使用的是旧模型名，复跑应按 `provider-adapters.md` 使用当前 `deepseek-v4-flash` / `deepseek-v4-pro`。每卷结束均 validate + compile 通过；实体复用、许映白身份伏笔回收、未寄出的名单长线、D 班点数弧线均成立。脱敏结果见 `modules/long-range-test-phase-a-2026-07-01.md`。
+- 真实 COTE 三卷本轮结果已收口为本机主数据包 `~/nc-workpack/cote-bilingual-v1`，后续不再重复清洗 / 日文匹配 / 起草 / 复核：
+  - v01 日文匹配：`source/ja/v01.blocks.json` 中故事正文 `3857/3857` 全覆盖；4 条中文译注进入 `review/ja_alignment_items.jsonl`，不强行匹配、不进入结构化抽取。
+  - v02/v03 MiMo 清洗：14 个正文章节完成，36 条低风险建议全部应用；v02/v03 正文图片缺图注为 0，锚点有效。v01 清洗结果按用户要求作为既有基线保留，不再改动。
+  - DeepSeek 起草 / 复核：v01-v03 最终 `validate` + `compile` passed，Accepted 283，review item 30，work_runs 53。起草使用 `deepseek-v4-flash`，复核使用 `deepseek-v4-pro`。
+  - 实跑中暴露并修复两个生产级问题：真实长章 JSON 输出截断（候选数收敛到最多 15 条）；模型偶尔输出短 block id（候选入库前补全为当前章节完整 block id）。
+  - 当前结论：清洗、匹配、起草、复核阶段足够作为后续阅读器作业基线，但尚不作为无监督批处理流水线；后续重点转向角色卡、时间线、说话人显示和 usage 对账。
 
 真实 LLM 长程验证依赖本机 API key，没有进入仓库可复现测试；仓库自动测试仍不调用模型。
 
@@ -47,17 +53,17 @@
 
 测试所需分析数据由 fixture 在临时目录生成。长程测试也须在工作副本上跑（见 `modules/long-range-test.md` 和 `modules/long-range-test-phase-a-2026-07-01.md`）。不要把模型试跑数据或 fixture 输出混回提交态样例包。
 
-真实商业 EPUB 测试语料放在 `samples/real-epubs/`（本机，`*.epub` 已被 `.gitignore` 忽略，正文不入库）。只有测试登记表 + 预期基线 + 已知怪癖入库，见 `modules/real-epub-test-corpus.md` 与 `modules/compatibility-testing-plan.md`。当前语料：COTE 中译第 1 卷分三册（1-1/1-2/1-3），三卷 import+normalize 均 validation passed。
+真实商业 EPUB 测试语料放在 `samples/real-epubs/`（本机，`*.epub` 已被 `.gitignore` 忽略，正文不入库）。只有测试登记表 + 预期基线 + 已知怪癖入库，见 `modules/real-epub-test-corpus.md` 与 `modules/compatibility-testing-plan.md`。当前语料：COTE 中译 v01/v02/v03 与日文原版 v01；本轮结果已固化到 `~/nc-workpack/cote-bilingual-v1`，真实书正文和模型输出不提交入库。
 
 ## 主要技术债
 
 - 长程 Phase A 已证明「全局 accepted + 当前卷正文」足以支撑 gray-tower 4 卷主线；暂不急着做卷/章级梗概、token 预算器、可选 RAG。
 - 复核仍只识别部分重复实体并升级；批量**裁决**已有入口（见下），但批量**合并**同名实体尚无专用入口。
 - 工作台作业粒度当前是章节，不是任意 scene / block range / 整卷。
-- `work_runs.context_estimate` 只记录 block 数；真实模型调用已记录 `token_usage` 并可通过 `/api/usage` 聚合查看，但尚未做 token 预算器。
+- `work_runs.context_estimate` 只记录 block 数；真实模型调用已记录 `token_usage` 并可通过 `/api/usage` 聚合查看，但尚未做 token 预算器，也尚未与 DeepSeek / MiMo 控制台按 request_id 对账。
 - 同模型起草 / 复核目前只有文档要求，没有代码硬拒绝。
 - `AgentStore` 已避免实体 first_seen 被后卷覆盖、避免非实体同 ID 内容静默覆盖；但 Change `before` 仍不足以恢复完整 update / merge / deprecate。
 - 清洗 MiMo 建议的通用应用器已实现（`applySuggestion` + `cleaningStore.commitVolumeChange`：采纳 -> 改 Markdown/manifest -> reparse/validate -> 失败自动回滚 -> 记 `accepted/cleaning_changes.jsonl`）；仍未做的是 split_block/merge_blocks 自动化（当前人工）。
-- EPUB importer 多个单卷 EPUB append 汇入同一 bookpack 已用真实 COTE 三卷（1-1/1-2/1-3 → v01/v02/v03）验证通过；真实 EPUB 的脚注 / 跨文件章节 / 异常 nav / 日文原版仍未验证（见 `modules/compatibility-testing-plan.md`）。
-- 非正文页已按强信号分类章节 kind（`classifyChapterKind`），但尚未从阅读时间线剔除（timeline 未按 `isBodyChapterKind` 过滤）。
+- EPUB importer 多个单卷 EPUB append 汇入同一 bookpack 已用真实 COTE 三卷（v01/v02/v03）验证通过；真实 EPUB 的脚注 / 跨文件章节 / 异常 nav 仍需继续扩大样本（见 `modules/compatibility-testing-plan.md`）。
+- 非正文页已按强信号分类章节 kind（`classifyChapterKind`），timeline、readerView、MiMo 清洗任务和 agent 整卷背景均按 `isBodyChapterKind` 过滤，封面 / 制作信息 / 目录 / 后记 / 特典不进入故事阅读和 agent 处理。
 - 阅读器防剧透已在 4 卷、填满 accepted 的工作副本上做过长程压测（gray-tower `v01`–`v04`，239 个时间线位置全扫）：0 越界泄漏、0 非单调回退，reveal 曲线单调（实体 14→23→31→36、relation_change 1→4→7→10），spoiler-bound 关系卡在其 `visible_from` 前一块隐藏、到位后出现。**真实书籍**级别的长程阅读压测仍未做；提交态样例包 accepted 为空，右栏走空态，需跑 agent 或 fixture 填数据后才见实体 / 卡片。

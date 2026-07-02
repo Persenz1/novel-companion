@@ -125,7 +125,6 @@ function renderToc(toc) {
     const li = el("li", `kind-${ch.kind}`, ch.title);
     li.onclick = () => {
       jumpToChapter(ch.id);
-      $(".layout").classList.remove("toc-open");
     };
     list.appendChild(li);
   }

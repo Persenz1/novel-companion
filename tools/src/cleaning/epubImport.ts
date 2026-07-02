@@ -5,6 +5,7 @@ import { FileStore } from "../fileStore.js";
 import { Parser } from "../parser.js";
 import { Validator } from "../validator.js";
 import type { BlockKind, Manifest, ValidationReport } from "../types.js";
+export { BODY_CHAPTER_KINDS, isBodyChapterKind } from "../chapterKind.js";
 
 interface ZipFileEntry {
   name: string;
@@ -527,15 +528,6 @@ function chineseVolumeTitle(n: number): string {
     return `第${digits[tens]}十${ones ? digits[ones] : ""}卷`;
   }
   return `第${n}卷`;
-}
-
-// Chapter kinds that belong to the reading timeline. Everything else
-// (cover/nav/toc/colophon/introduction/illustration/title/afterword/extra) is
-// non-body: front/back matter that should not be treated as story spine.
-export const BODY_CHAPTER_KINDS = new Set(["chapter", "prologue", "epilogue", "interlude"]);
-
-export function isBodyChapterKind(kind: string): boolean {
-  return BODY_CHAPTER_KINDS.has(kind);
 }
 
 /**

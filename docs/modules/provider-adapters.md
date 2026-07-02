@@ -44,7 +44,8 @@ model: string;
 - 应用层只读取最终 `message.content`，不展示、不写入 `reasoning_content`；推理 token 仍由供应商计入用量。
 - 起草 / 复核 `maxTokens: 8192`，避免候选 JSON 截断。
 - `work_runs.token_usage` 记录 DeepSeek cache hit/miss、`prompt_cache_hit_ratio` 和供应商返回的 `reasoning_tokens`，便于后续成本排查。
-- 工作台 `/api/usage` 会聚合 `reports/work_runs.jsonl` 和 `reports/cleaning_mimo_outputs/*.json`，展示输入、缓存命中 / 未命中、输出、推理、图片 token；当前不硬编码供应商价格。
+- 工作台 `/api/usage` 会聚合 `reports/work_runs.jsonl`、`reports/cleaning_mimo_outputs/*.json` 和 `reports/ja_alignment_mimo_outputs/*.json`，展示匹配 / 清洗 / 起草 / 复核的输入、缓存命中 / 未命中、输出、推理、图片 token；当前不硬编码供应商价格。
+- DeepSeek / MiMo 官网控制台与本地 usage 账本目前存在明显口径差异；本地统计只能作为阶段内相对观察，不能作为最终成本对账。后续需要 request_id 级 raw usage audit。
 
 ## MiMo
 

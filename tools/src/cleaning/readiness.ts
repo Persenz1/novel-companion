@@ -4,7 +4,7 @@
 import { FileStore } from "../fileStore.js";
 import { Validator } from "../validator.js";
 import type { Asset, AssetAnchor, Block, Manifest } from "../types.js";
-import { isBodyChapterKind } from "./epubImport.js";
+import { isBodyChapterKind } from "../chapterKind.js";
 import { isIsolatedSeparator } from "./normalize.js";
 import { readItems } from "./cleaningStore.js";
 

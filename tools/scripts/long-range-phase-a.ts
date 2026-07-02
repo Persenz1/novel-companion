@@ -13,6 +13,7 @@ import type { Manifest } from "../src/types.js";
 import { Validator } from "../src/validator.js";
 import { loadConfig } from "../src/agent/config.js";
 import { runDraft, runReview } from "../src/agent/pipeline.js";
+import { isBodyChapterKind } from "../src/chapterKind.js";
 
 type Rec = Record<string, unknown>;
 
@@ -22,6 +23,9 @@ interface Args {
   volumes: string[];
   runModel: boolean;
   force: boolean;
+  resume: boolean;
+  startFrom: string | null;
+  stopAfter: string | null;
 }
 
 interface Metrics {
@@ -70,6 +74,9 @@ function parseArgs(): Args {
     volumes: ["v01", "v02"],
     runModel: false,
     force: false,
+    resume: false,
+    startFrom: null,
+    stopAfter: null,
   };
   const args = process.argv.slice(2);
   for (let i = 0; i < args.length; i += 1) {
@@ -79,6 +86,9 @@ function parseArgs(): Args {
     else if (a === "--volumes") out.volumes = requireValue(args, ++i, a).split(",").filter(Boolean);
     else if (a === "--run-model") out.runModel = true;
     else if (a === "--force") out.force = true;
+    else if (a === "--resume") out.resume = true;
+    else if (a === "--start-from") out.startFrom = requireValue(args, ++i, a);
+    else if (a === "--stop-after") out.stopAfter = requireValue(args, ++i, a);
     else if (a === "--help" || a === "-h") usage();
     else throw new Error(`Unknown argument: ${a}`);
   }
@@ -101,6 +111,9 @@ Options:
   --work DIR        Working copy output dir. Default: /tmp/gt-longrange-<timestamp>
   --volumes CSV     Volumes to process in manifest order. Default: v01,v02
   --force           Remove --work if it already exists.
+  --resume          Use an existing --work dir instead of copying --source.
+  --start-from ID   Skip chapters before this chapter id (for resuming).
+  --stop-after ID   Stop after this chapter id (inclusive).
 `);
   process.exit(0);
 }
@@ -121,7 +134,12 @@ function prepareWorkdir(source: string, work: string, force: boolean): void {
 function chaptersForVolumes(manifest: Manifest, volumes: string[]): string[] {
   const wanted = new Set(volumes);
   return manifest.volumes.flatMap((v) =>
-    wanted.has(v.id) ? [...v.chapters].sort((a, b) => a.order - b.order).map((ch) => ch.id) : [],
+    wanted.has(v.id)
+      ? [...v.chapters]
+          .filter((ch) => isBodyChapterKind(ch.kind))
+          .sort((a, b) => a.order - b.order)
+          .map((ch) => ch.id)
+      : [],
   );
 }
 
@@ -308,10 +326,21 @@ async function main(): Promise<void> {
   if (!cfg.drafter.model || !cfg.reviewer.model) throw new Error("Missing model in tools/.workbench-config.json");
   if (cfg.drafter.model === cfg.reviewer.model) throw new Error("Drafter and reviewer must be different models for this test.");
 
-  prepareWorkdir(args.source, args.work, args.force);
+  if (!args.resume) prepareWorkdir(args.source, args.work, args.force);
+  else if (!fs.existsSync(args.work)) throw new Error(`Cannot resume; workdir not found: ${args.work}`);
   const store = new FileStore(args.work);
   const manifest = store.readJson<Manifest>("manifest.json");
-  const chapters = chaptersForVolumes(manifest, args.volumes);
+  let chapters = chaptersForVolumes(manifest, args.volumes);
+  if (args.startFrom) {
+    const idx = chapters.indexOf(args.startFrom);
+    if (idx < 0) throw new Error(`--start-from chapter not found in selected volumes: ${args.startFrom}`);
+    chapters = chapters.slice(idx);
+  }
+  if (args.stopAfter) {
+    const idx = chapters.indexOf(args.stopAfter);
+    if (idx < 0) throw new Error(`--stop-after chapter not found in selected volumes: ${args.stopAfter}`);
+    chapters = chapters.slice(0, idx + 1);
+  }
   if (chapters.length === 0) throw new Error(`No chapters found for volumes: ${args.volumes.join(",")}`);
 
   console.log(`[setup] source=${args.source}`);

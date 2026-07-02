@@ -16,6 +16,7 @@
 - `modules/cleaning-pipeline-v2-design.md`：清洗流水线 v2（确定性规范化 + 建议应用器 + 裁决队列 + 快照回滚 + 收口 gate），设计与实现落点。
 - `modules/real-epub-test-corpus.md`：真实 EPUB 测试语料登记表（预期基线 + 已知怪癖）。
 - `modules/compatibility-testing-plan.md`：真实 EPUB 极端兼容性测试规划。
+- `modules/real-book-bilingual-long-range-test.md`：本轮真实书籍中日匹配、阅读器渲染与长程处理测试计划。
 - `modules/provider-adapters.md`：DeepSeek / MiMo 等模型供应商适配层。
 - `modules/ai-workbench.md`：AI 起草、独立复核、数据工作台、Change 和回滚。
 - `modules/compiled-query.md`：`reader_index.json` 与 `getVisibleContext()`。
@@ -23,7 +24,7 @@
 - `modules/test-fixture.md`：gray-tower 4 卷样例包、fixture 和验收边界。
 - `modules/long-range-test.md`：跨卷上下文的测试执行手册。
 - `modules/long-range-test-phase-a-2026-07-01.md`：DeepSeek 四卷 Phase A 长程压力测试结果与下一步。
-- `modules/next-session-cleaning-and-multivolume.md`：下一轮多卷清洗、多卷操作和成本排查计划。
+- `modules/next-session-cleaning-and-multivolume.md`：下一轮阅读器作业、结果包验收和 usage 对账计划。
 
 ## 当前判断规则
 
