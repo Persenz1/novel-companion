@@ -175,6 +175,13 @@ function buildTask(
     `字段名只能使用 id/type/target/confidence/risk/reason/patch；不要使用 action/detail/priority/value。\n` +
     `type 只能是 split_block、merge_blocks、drop_noise、retitle_chapter、set_block_kind、set_scene、set_asset_alt、move_asset_anchor。\n` +
     `target 必须是本任务里真实存在的 block_id、chapter_id 或 asset_id，禁止输出 asset_or_block_id 等占位值。\n` +
+    `patch 必须是对象，且按类型给字段：\n` +
+    `  set_asset_alt → {"alt":"一句话中文图注"}；alt 只描述画面本身（谁、在做什么、场景），一律用中文，30 字内，` +
+    `不要写“设置 alt 为”之类的话，不要抄录图中大段日文/英文。\n` +
+    `  set_block_kind → {"kind":"..."}；set_scene 不需要 patch；move_asset_anchor → {"block":"目标 block_id"}；` +
+    `retitle_chapter → {"title":"中文章节名"}；drop_noise 不需要 patch。\n` +
+    `消歧规则：仅含单独数字或符号、用作场景分隔的 block 已由系统自动规范为 separator；` +
+    `不要再对这类 block 或已是 separator 的 block 提 drop_noise / set_scene / set_block_kind。\n` +
     `不要展开推理过程；快速检查后直接输出 JSON。\n` +
     `risk 只能是 low、medium、high。没有真实建议时输出空 suggestions 数组。`;
 
@@ -189,6 +196,8 @@ function buildTask(
       "不要改写小说正文。",
       "只提出结构清洗建议、图片图注建议和明显噪声处理建议。",
       "删除、跨章移动、合并章节、人物身份判断都必须标为 high risk。",
+      "图注一律用中文；alt 只描述画面，不抄图中大段外文，不写“设置 alt”之类的话。",
+      "仅含数字/符号的场景分隔 block 已由系统规范化，不要再对其提 drop_noise/set_scene。",
       "输出必须是 JSON 对象，且只包含 suggestions 数组。",
       "每条建议都必须引用现有 block_id 或 asset_id。",
     ],
@@ -201,7 +210,7 @@ function buildTask(
           confidence: "number 0..1",
           risk: "low | medium | high",
           reason: "string",
-          patch: "object",
+          patch: '按类型：set_asset_alt={"alt":"中文图注"}, set_block_kind={"kind":"..."}, move_asset_anchor={"block":"block_id"}, retitle_chapter={"title":"..."}, drop_noise/set_scene 可为空',
         },
       ],
     },

@@ -71,6 +71,7 @@ function resetWorkspace() {
   renderTasks();
   $("#asset-list").replaceChildren(el("div", "empty", "导入 EPUB 后显示图片"));
   renderOutput({ parsed: { suggestions: [], summary: "导入 EPUB 后显示清洗建议" } });
+  $("#tab-queue").replaceChildren(el("div", "empty", "导入 EPUB 后可裁决清洗建议"));
 }
 
 async function autoClean() {
@@ -99,6 +100,14 @@ async function autoClean() {
     },
   });
   await runAllTasks();
+  // 汇入 MiMo 建议到裁决队列，人可在“裁决队列”页看图/看上下文裁决并一键应用低风险项。
+  try {
+    const ing = await api("/api/cleaning/ingest", "POST", {});
+    toast(`已汇入 ${ing.item_count} 条清洗建议到裁决队列`);
+    await loadQueue();
+  } catch (err) {
+    toast(err.message, true);
+  }
 }
 
 function resetForRun() {
@@ -418,12 +427,145 @@ function setupTabs() {
   document.querySelectorAll(".tab").forEach((btn) => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x === btn));
+      $("#tab-queue").hidden = btn.dataset.tab !== "queue";
       $("#tab-suggestions").hidden = btn.dataset.tab !== "suggestions";
       $("#tab-raw").hidden = btn.dataset.tab !== "raw";
       $("#tab-usage").hidden = btn.dataset.tab !== "usage";
       if (btn.dataset.tab === "usage") loadUsage();
+      if (btn.dataset.tab === "queue") loadQueue();
     });
   });
+}
+
+// ---- 裁决队列 + 收口 ----
+async function loadQueue() {
+  const box = $("#tab-queue");
+  box.replaceChildren();
+  if (!state.activeBookpack) {
+    box.appendChild(el("div", "empty", "导入 EPUB 后可裁决清洗建议"));
+    return;
+  }
+
+  // 工具条
+  const bar = el("div", "queue-bar");
+  const mk = (label, cls, fn) => {
+    const b = el("button", cls, label);
+    b.addEventListener("click", () => fn(b));
+    return b;
+  };
+  bar.append(
+    mk("规范化", null, wrap(async () => { const r = await api("/api/cleaning/normalize", "POST", {}); toast(`规范化 ${r.total_edits} 处`); await loadQueue(); await loadAssets(); })),
+    mk("取入建议", null, wrap(async () => { const r = await api("/api/cleaning/ingest", "POST", {}); toast(`取入 ${r.item_count} 条（新增 ${r.new_count}）`); await loadQueue(); })),
+    mk("应用全部低风险", "primary", wrap(async () => { const r = await api("/api/cleaning/items/apply", "POST", { all_low: true }); toast(`应用 ${r.applied.length}，跳过 ${r.skipped.length}`); await loadQueue(); await loadAssets(); })),
+    mk("刷新", null, wrap(loadQueue)),
+  );
+  box.appendChild(bar);
+
+  // 收口
+  box.appendChild(await readinessCard());
+
+  // 建议列表（未裁决在前）
+  const { items } = await api("/api/cleaning/items");
+  const order = { open: 0, accepted: 1, applied: 2, rejected: 3 };
+  items.sort((a, b) => (order[a.status] - order[b.status]) || (a.chapter_id > b.chapter_id ? 1 : -1));
+  const list = el("div", "queue-list");
+  if (!items.length) list.appendChild(el("div", "empty", "暂无清洗建议（先自动清洗或点“取入建议”）"));
+  for (const it of items) list.appendChild(queueItem(it));
+  box.appendChild(list);
+
+  // 变更历史（可回滚）
+  box.appendChild(await changesCard());
+}
+
+function wrap(fn) {
+  return async (btn) => {
+    if (btn) btn.disabled = true;
+    try { await fn(); } catch (err) { toast(err.message, true); } finally { if (btn) btn.disabled = false; }
+  };
+}
+
+async function readinessCard() {
+  const card = el("div", "readiness");
+  try {
+    const r = await api("/api/cleaning/readiness");
+    card.appendChild(el("div", `readiness-head ${r.ready ? "ok" : "block"}`, r.ready ? "✓ 清洗数据已就绪，可 compile" : "✗ 清洗未就绪"));
+    for (const c of r.checks) {
+      const mark = c.ok ? "✓" : c.blocking ? "✗" : "!";
+      card.appendChild(el("div", `readiness-line ${c.ok ? "ok" : c.blocking ? "block" : "warn"}`, `${mark} ${c.detail}`));
+    }
+  } catch (err) {
+    card.appendChild(el("div", "empty", err.message));
+  }
+  return card;
+}
+
+function queueItem(it) {
+  const card = el("div", `queue-item status-${it.status}`);
+  const head = el("div", "suggestion-head");
+  head.append(
+    el("span", "m-type", it.type),
+    el("span", "m-title", it.target),
+    el("span", `risk ${it.risk}`, it.risk),
+    el("span", "queue-status", it.status),
+  );
+  card.appendChild(head);
+  card.appendChild(el("div", "m-desc", it.reason || ""));
+  if (it.block_preview) card.appendChild(el("div", "m-span", `${it.block_preview.kind}: ${it.block_preview.text}`));
+
+  let altInput = null;
+  if (it.asset) {
+    const wrapImg = el("div", "queue-img");
+    if (it.asset.url) { const img = el("img"); img.src = it.asset.url; img.alt = it.target; wrapImg.appendChild(img); }
+    card.appendChild(wrapImg);
+    if (it.type === "set_asset_alt") {
+      altInput = el("input");
+      altInput.type = "text";
+      altInput.value = (it.patch && it.patch.alt) || it.asset.alt || "";
+      card.appendChild(altInput);
+    }
+  } else if (it.patch && Object.keys(it.patch).length) {
+    const pre = el("pre", "m-detail");
+    pre.textContent = JSON.stringify(it.patch, null, 2);
+    card.appendChild(pre);
+  }
+
+  const row = el("div", "row");
+  const apply = el("button", "primary", "应用");
+  apply.addEventListener("click", wrap(async () => {
+    if (altInput) await api("/api/cleaning/items/resolve", "POST", { ids: [it.id], decision: "accept", patch: { alt: altInput.value.trim() } });
+    const r = await api("/api/cleaning/items/apply", "POST", { ids: [it.id] });
+    if (r.applied.length) toast("已应用并写回"); else toast(r.skipped?.[0]?.reason || "未应用", true);
+    await loadQueue(); await loadAssets();
+  }));
+  const reject = el("button", null, "拒绝");
+  reject.addEventListener("click", wrap(async () => { await api("/api/cleaning/items/resolve", "POST", { ids: [it.id], decision: "reject" }); toast("已拒绝"); await loadQueue(); }));
+  row.append(apply, reject);
+  card.appendChild(row);
+  return card;
+}
+
+async function changesCard() {
+  const card = el("div", "changes-card");
+  card.appendChild(el("h3", null, "变更历史"));
+  try {
+    const { changes } = await api("/api/cleaning/changes");
+    if (!changes.length) { card.appendChild(el("div", "empty", "暂无清洗变更")); return card; }
+    for (const c of changes) {
+      const row = el("div", `change-row ${c.status}`);
+      row.appendChild(el("span", "change-sum", `${c.id} · ${c.op} · ${c.volume_id} · ${c.summary}`));
+      if (c.status === "applied") {
+        const rb = el("button", null, "回滚");
+        rb.addEventListener("click", wrap(async () => { const r = await api("/api/cleaning/rollback", "POST", { change_id: c.id }); toast(`已回滚 ${r.rolled_back.join(",")}`); await loadQueue(); await loadAssets(); }));
+        row.appendChild(rb);
+      } else {
+        row.appendChild(el("span", "change-sum", "已回滚"));
+      }
+      card.appendChild(row);
+    }
+  } catch (err) {
+    card.appendChild(el("div", "empty", err.message));
+  }
+  return card;
 }
 
 function bind() {

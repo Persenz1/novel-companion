@@ -27,6 +27,18 @@ import { listCleaningAssets, annotateAsset, setAssetAlt } from "./cleaning/image
 import { importEpubToBookpack } from "./cleaning/epubImport.js";
 import { prepareMimoCleaningInputs } from "./cleaning/mimoFeed.js";
 import { runMimoCleaningTask } from "./cleaning/mimoRun.js";
+import { normalizeBookpack } from "./cleaning/normalize.js";
+import { ingestMimoSuggestions } from "./cleaning/ingest.js";
+import { applyItems } from "./cleaning/applySuggestion.js";
+import { checkReadiness } from "./cleaning/readiness.js";
+import {
+  readItems,
+  writeItems,
+  setItemsStatus,
+  rollbackChange,
+  type CleaningChange,
+} from "./cleaning/cleaningStore.js";
+import type { Asset, AssetAnchor, Block } from "./types.js";
 
 type Rec = Record<string, unknown>;
 
@@ -496,6 +508,8 @@ async function handleApi(
     const next = { ...cfg, bookpack_dir: targetDir };
     saveConfig(next);
     const store = new FileStore(targetDir);
+    // 确定性规范化在导入后自动执行（孤立数字/符号→separator），让下游任务与建议基于干净结构。
+    const normalized = normalizeBookpack(store);
     const prepared = prepareMimoCleaningInputs(store);
     const chapterCount = imports.reduce((n, item) => n + item.chapter_count, 0);
     const blockCount = imports.reduce((n, item) => n + item.block_count, 0);
@@ -511,6 +525,7 @@ async function handleApi(
         image_count: imageCount,
         validation_status: imports[imports.length - 1]?.validation?.status ?? "unknown",
       },
+      normalized: { edits: normalized.total_edits },
       prepared,
       target_dir: targetDir,
       config: redactConfig(next),
@@ -590,6 +605,89 @@ async function handleApi(
     setAssetAlt(store, String(body.asset_id), String(body.alt ?? ""));
     const asset = listCleaningAssets(store).find((a) => a.id === String(body.asset_id));
     return sendJson(res, 200, { ok: true, asset });
+  }
+
+  // ---- 清洗·规范化 + 建议裁决/应用 + 收口 ----
+  if (pathname === "/api/cleaning/normalize" && method === "POST") {
+    const body = await readBody(req);
+    const result = normalizeBookpack(openBookpack(cfg), typeof body.volume_id === "string" && body.volume_id ? body.volume_id : undefined);
+    return sendJson(res, 200, result);
+  }
+
+  if (pathname === "/api/cleaning/ingest" && method === "POST") {
+    return sendJson(res, 200, ingestMimoSuggestions(openBookpack(cfg)));
+  }
+
+  // 清洗建议队列：图片类附上图片 url，其它类附上目标 block/章节文本预览，便于看图/看上下文裁决。
+  if (pathname === "/api/cleaning/items" && method === "GET") {
+    const store = openBookpack(cfg);
+    const assets = new Map(store.readJsonl<Asset>("parsed/assets.jsonl").rows.map((a) => [a.id, a]));
+    const anchors = store.readJsonl<AssetAnchor>("parsed/asset_anchors.jsonl").rows;
+    const anchorByAsset = new Map(anchors.map((an) => [an.asset_id, an]));
+    const blocks = new Map(store.readJsonl<Block>("parsed/blocks.jsonl").rows.map((b) => [b.id, b]));
+    const items = readItems(store).map((it) => {
+      const enriched: Rec = { ...it };
+      if (it.type === "set_asset_alt" || it.type === "move_asset_anchor") {
+        const a = assets.get(it.target);
+        if (a) enriched.asset = { id: a.id, alt: a.alt, url: `/api/asset/${encodeURIComponent(a.id)}`, anchor_block: anchorByAsset.get(a.id)?.block_id ?? null };
+      } else {
+        const b = blocks.get(it.target);
+        if (b) enriched.block_preview = { id: b.id, kind: b.kind, text: b.text.slice(0, 120) };
+      }
+      return enriched;
+    });
+    return sendJson(res, 200, { items });
+  }
+
+  // 裁决：accept / reject（可选 patch 编辑，仅单条）。批量传 ids。
+  if (pathname === "/api/cleaning/items/resolve" && method === "POST") {
+    const body = await readBody(req);
+    const ids = Array.isArray(body.ids) ? body.ids.map(String) : body.id ? [String(body.id)] : [];
+    const decision = String(body.decision ?? "");
+    if (ids.length === 0) return sendJson(res, 400, { error: "ids 为空。" });
+    if (decision !== "accept" && decision !== "reject") return sendJson(res, 400, { error: "decision 只能是 accept/reject。" });
+    const store = openBookpack(cfg);
+    if (body.patch && ids.length === 1) {
+      const items = readItems(store);
+      const it = items.find((x) => x.id === ids[0]);
+      if (it) {
+        it.patch = { ...it.patch, ...(body.patch as Rec) };
+        writeItems(store, items);
+      }
+    }
+    const n = setItemsStatus(store, ids, decision === "accept" ? "accepted" : "rejected");
+    return sendJson(res, 200, { resolved: n, decision });
+  }
+
+  // 应用：传 ids，或 all_low=true 应用全部低风险 open/accepted 建议。写回 Markdown + reparse + validate + 记 change。
+  if (pathname === "/api/cleaning/items/apply" && method === "POST") {
+    const body = await readBody(req);
+    const store = openBookpack(cfg);
+    let ids: string[] = Array.isArray(body.ids) ? body.ids.map(String) : [];
+    if (body.all_low === true) {
+      ids = readItems(store)
+        .filter((it) => it.risk === "low" && (it.status === "open" || it.status === "accepted"))
+        .map((it) => it.id);
+    }
+    if (ids.length === 0) return sendJson(res, 400, { error: "没有可应用的建议。" });
+    const result = applyItems(store, ids, "workbench");
+    return sendJson(res, 200, result);
+  }
+
+  if (pathname === "/api/cleaning/changes" && method === "GET") {
+    const store = openBookpack(cfg);
+    const changes = store.readJsonl<CleaningChange>("accepted/cleaning_changes.jsonl").rows.reverse();
+    return sendJson(res, 200, { changes });
+  }
+
+  if (pathname === "/api/cleaning/rollback" && method === "POST") {
+    const body = await readBody(req);
+    const result = rollbackChange(openBookpack(cfg), String(body.change_id));
+    return sendJson(res, 200, result);
+  }
+
+  if (pathname === "/api/cleaning/readiness" && method === "GET") {
+    return sendJson(res, 200, checkReadiness(openBookpack(cfg)));
   }
 
   if (pathname === "/api/changes" && method === "GET") {

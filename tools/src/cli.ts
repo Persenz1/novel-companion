@@ -20,6 +20,11 @@ import { exportBookpackToEpub } from "./cleaning/bookpackToEpub.js";
 import { importEpubToBookpack } from "./cleaning/epubImport.js";
 import { prepareMimoCleaningInputs } from "./cleaning/mimoFeed.js";
 import { runMimoCleaningTask } from "./cleaning/mimoRun.js";
+import { normalizeBookpack } from "./cleaning/normalize.js";
+import { ingestMimoSuggestions } from "./cleaning/ingest.js";
+import { applyItems, applyOne } from "./cleaning/applySuggestion.js";
+import { readItems, rollbackChange, type CleaningChange } from "./cleaning/cleaningStore.js";
+import { checkReadiness } from "./cleaning/readiness.js";
 
 function usage(): never {
   console.error("Usage:");
@@ -32,6 +37,12 @@ function usage(): never {
   console.error("  nc import-epub <epub-path> <bookpack-dir> [--volume-id v01] [--series-id id] [--pack-id id] [--pack-name name] [--force] [--append] [--no-validate]");
   console.error("  nc prepare-mimo <bookpack-dir> [volume_id]");
   console.error("  nc run-mimo-cleaning <bookpack-dir> <task-json>");
+  console.error("  nc normalize <bookpack-dir> [volume_id]                # 确定性规范化（孤立数字/符号→separator）");
+  console.error("  nc ingest-cleaning <bookpack-dir>                      # MiMo 输出→清洗建议队列");
+  console.error("  nc apply-cleaning <bookpack-dir> <itemId...> | --all-low | --one <type> <target> [patchJson]");
+  console.error("  nc cleaning-changes <bookpack-dir>                     # 列出清洗 change");
+  console.error("  nc rollback-cleaning <bookpack-dir> <changeId>");
+  console.error("  nc cleaning-readiness <bookpack-dir>                   # 收口验收清单");
   process.exit(2);
 }
 
@@ -251,6 +262,94 @@ function parseImportFlags(flags: string[]): {
   return opts;
 }
 
+function cmdNormalize(args: string[]): void {
+  const [bookpackDir, volumeId] = args;
+  if (!bookpackDir) usage();
+  const store = new FileStore(bookpackDir);
+  const result = normalizeBookpack(store, volumeId);
+  console.log(`[normalize] ${store.root}`);
+  console.log(`  edits=${result.total_edits} validation_ok=${result.validation_ok}`);
+  for (const v of result.volume_results) {
+    const r = v.result;
+    console.log(`  ${v.volume_id}: ${r.edits.length} edits ${r.changed ? `(change ${r.change?.id})` : "(no change / rolled back)"}`);
+  }
+}
+
+function cmdIngestCleaning(args: string[]): void {
+  const [bookpackDir] = args;
+  if (!bookpackDir) usage();
+  const store = new FileStore(bookpackDir);
+  const r = ingestMimoSuggestions(store);
+  console.log(`[ingest-cleaning] files=${r.file_count} items=${r.item_count} new=${r.new_count}`);
+  console.log(`  by_status=${JSON.stringify(r.by_status)}`);
+}
+
+function cmdApplyCleaning(args: string[]): void {
+  const [bookpackDir, ...rest] = args;
+  if (!bookpackDir) usage();
+  const store = new FileStore(bookpackDir);
+
+  // Ad-hoc single suggestion: apply-cleaning <dir> --one <type> <target> [<patchJson>]
+  if (rest[0] === "--one") {
+    const [, type, target, patchJson] = rest;
+    if (!type || !target) usage();
+    const patch = patchJson ? (JSON.parse(patchJson) as Record<string, unknown>) : {};
+    const out = applyOne(store, { type, target, patch });
+    console.log(`[apply-cleaning] ${JSON.stringify(out)}`);
+    return;
+  }
+
+  // Apply items by id, or --all-low for every low-risk open/accepted item.
+  let ids: string[];
+  if (rest[0] === "--all-low") {
+    ids = readItems(store)
+      .filter((it) => it.risk === "low" && (it.status === "open" || it.status === "accepted"))
+      .map((it) => it.id);
+  } else {
+    ids = rest;
+  }
+  if (ids.length === 0) {
+    console.log("[apply-cleaning] no items to apply");
+    return;
+  }
+  const result = applyItems(store, ids, "cli");
+  console.log(`[apply-cleaning] applied=${result.applied.length} skipped=${result.skipped.length} changes=${result.changes.length}`);
+  for (const s of result.skipped.slice(0, 20)) console.log(`  skip ${s.id}: ${s.reason}`);
+  for (const f of result.failed_volumes) console.log(`  volume ${f.volume_id} 校验失败已回滚 (${f.validation.errors.length} errors)`);
+}
+
+function cmdCleaningChanges(args: string[]): void {
+  const [bookpackDir] = args;
+  if (!bookpackDir) usage();
+  const store = new FileStore(bookpackDir);
+  const changes = store.readJsonl<CleaningChange>("accepted/cleaning_changes.jsonl").rows;
+  console.log(`[cleaning-changes] ${changes.length} total`);
+  for (const c of changes) {
+    console.log(`  ${c.id} [${c.status}] ${c.op} ${c.volume_id} — ${c.summary} (${c.edits.length} edits)`);
+  }
+}
+
+function cmdRollbackCleaning(args: string[]): void {
+  const [bookpackDir, changeId] = args;
+  if (!bookpackDir || !changeId) usage();
+  const store = new FileStore(bookpackDir);
+  const r = rollbackChange(store, changeId);
+  console.log(`[rollback-cleaning] rolled_back=${r.rolled_back.join(",")} validation=${r.validation.status}`);
+}
+
+function cmdCleaningReadiness(args: string[]): void {
+  const [bookpackDir] = args;
+  if (!bookpackDir) usage();
+  const store = new FileStore(bookpackDir);
+  const r = checkReadiness(store);
+  console.log(`[cleaning-readiness] ready=${r.ready}`);
+  for (const c of r.checks) {
+    const mark = c.ok ? "✓" : c.blocking ? "✗" : "!";
+    console.log(`  ${mark} ${c.id}: ${c.detail}${c.examples.length ? "  e.g. " + c.examples.join("; ") : ""}`);
+  }
+  if (!r.ready) process.exitCode = 1;
+}
+
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
   switch (command) {
@@ -280,6 +379,24 @@ async function main(): Promise<void> {
       break;
     case "run-mimo-cleaning":
       await cmdRunMimoCleaning(rest);
+      break;
+    case "normalize":
+      cmdNormalize(rest);
+      break;
+    case "ingest-cleaning":
+      cmdIngestCleaning(rest);
+      break;
+    case "apply-cleaning":
+      cmdApplyCleaning(rest);
+      break;
+    case "cleaning-changes":
+      cmdCleaningChanges(rest);
+      break;
+    case "rollback-cleaning":
+      cmdRollbackCleaning(rest);
+      break;
+    case "cleaning-readiness":
+      cmdCleaningReadiness(rest);
       break;
     default:
       usage();

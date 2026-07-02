@@ -227,3 +227,25 @@ textarea.epub-input { min-height: 118px; font-family: ui-monospace, monospace; }
   .cleaning-layout { grid-template-columns: 280px 1fr; }
   .cleaning-right { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); min-height: 320px; }
 }
+
+/* 清洗裁决队列 */
+.queue-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.queue-bar button { font-size: 12px; padding: 5px 10px; }
+.readiness { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+.readiness-head { font-weight: 600; margin-bottom: 4px; }
+.readiness-head.ok, .readiness-line.ok { color: #2e7d32; }
+.readiness-head.block, .readiness-line.block { color: #c62828; }
+.readiness-line.warn { color: #b26a00; }
+.readiness-line { font-size: 12px; line-height: 1.6; }
+.queue-list { display: flex; flex-direction: column; gap: 8px; }
+.queue-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.queue-item.status-applied { opacity: 0.6; }
+.queue-item.status-rejected { opacity: 0.45; }
+.queue-status { margin-left: auto; font-size: 11px; color: var(--muted); }
+.queue-img img { max-width: 100%; max-height: 220px; border-radius: 6px; margin: 6px 0; display: block; }
+.queue-item input[type="text"] { width: 100%; box-sizing: border-box; margin: 4px 0; }
+.queue-item .row { display: flex; gap: 6px; margin-top: 6px; }
+.changes-card { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.change-row { display: flex; gap: 8px; align-items: center; font-size: 12px; padding: 4px 0; }
+.change-row.rolled_back { opacity: 0.5; text-decoration: line-through; }
+.change-sum { flex: 1; }

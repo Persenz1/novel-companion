@@ -25,7 +25,6 @@ import type {
 } from "./types.js";
 
 const RECOGNIZED_TAGS = new Set(["chapter", "block", "scene", "asset", "alignment"]);
-const BLOCK_KINDS = new Set<BlockKind>(["paragraph", "dialogue", "separator", "note"]);
 const ALIGNMENT_STATUSES = new Set<AlignmentStatus>(["parsed", "pending_review", "reviewed"]);
 
 export interface VolumeParseResult {
@@ -220,22 +219,12 @@ export class Parser {
               object_id: primary,
             });
           }
+          // Block kind is open (see BlockKind in types.ts): the importer may
+          // synthesize `image` carriers and the cleaning AI may assign semantic
+          // kinds. Keep whatever kind the Markdown declares; only a missing kind
+          // falls back to paragraph.
           const kindRaw = attrs.kind;
-          let kind: BlockKind = "paragraph";
-          if (kindRaw) {
-            if (BLOCK_KINDS.has(kindRaw as BlockKind)) {
-              kind = kindRaw as BlockKind;
-            } else {
-              notes.push({
-                code: "UNKNOWN_BLOCK_KIND",
-                severity: "warning",
-                message: `未知 block kind「${kindRaw}」，按 paragraph 处理。`,
-                file: mainText,
-                line: lineNo,
-                object_id: primary,
-              });
-            }
-          }
+          const kind: BlockKind = kindRaw ? (kindRaw as BlockKind) : "paragraph";
           const { text, next } = collectBlockText(lines, i + 1);
           i = next - 1;
           bundle.blocks.push({

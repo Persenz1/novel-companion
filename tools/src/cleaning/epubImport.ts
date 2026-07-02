@@ -103,6 +103,7 @@ export function importEpubToBookpack(
       forceVolumeId: options.volumeId,
       order: idx,
       opfRoot: opf.rootDir,
+      properties: item.properties,
     });
   });
 
@@ -159,7 +160,7 @@ function parseOpf(xml: string, opfPath: string): OpfPackage {
 
 function parseChapterXhtml(
   xhtml: string,
-  ctx: { href: string; volumeId: string; forceVolumeId?: string; order: number; opfRoot: string },
+  ctx: { href: string; volumeId: string; forceVolumeId?: string; order: number; opfRoot: string; properties?: string },
 ): ImportedChapter {
   const sectionAttrs = firstAttrs(xhtml, "section");
   const declaredChapterId = attrFromAttrs(sectionAttrs, "data-nc-chapter-id");
@@ -171,58 +172,88 @@ function parseChapterXhtml(
   const volumeTitle = attrFromAttrs(sectionAttrs, "data-nc-volume-title");
   const chapterId = declaredChapterId ?? generatedChapterId(volumeId, ctx.order, xhtml);
   const title = decodeEntities(stripTags(textOf(xhtml, "h1") || textOf(xhtml, "title") || `Chapter ${ctx.order + 1}`)).trim();
-  const kind = attrFromAttrs(sectionAttrs, "epub:type") ?? inferChapterKind(title, ctx.order);
+  const kind = classifyChapterKind(ctx.href, ctx.properties, attrFromAttrs(sectionAttrs, "epub:type"), title, ctx.order);
   const body = blockOf(xhtml, "body") || xhtml;
-  const tokens = [...body.matchAll(/<(p|hr|figure)\b([^>]*)>([\s\S]*?)<\/\1>|<hr\b([^>]*)\/?>/gi)];
+  // Capture <p>/<figure> as paired tags, plus standalone <img> and <hr>. Real-world
+  // EPUBs frequently wrap images as <div class="..."><img/></div> or bare <img/>
+  // rather than <figure>, so images must be picked up wherever they appear, not only
+  // inside <figure>.
+  const tokens = [...body.matchAll(/<(p|figure)\b([^>]*)>([\s\S]*?)<\/\1>|<img\b([^>]*)\/?>|<hr\b([^>]*)\/?>/gi)];
   const blocks: ImportedBlock[] = [];
   const assets: ImportedAsset[] = [];
   let nextBlockNo = 1;
   let nextImageNo = 1;
   let lastBlockId = "";
 
+  const pushImage = (wrapperAttrs: string, imgAttrs: string): void => {
+    const src = attrFromAttrs(imgAttrs, "src");
+    if (!src) return;
+    if (!lastBlockId) {
+      // Pure-image page (image appears before any text block, e.g. a cover or
+      // colour-plate page). Synthesize an `image` carrier block so the image
+      // enters the block sequence and parsed data instead of being dropped.
+      // Whether it is a cover / colour plate / non-body page is left to the
+      // cleaning AI; here we only guarantee it keeps its place in the order.
+      const carrierId = `${chapterId}.b${String(nextBlockNo).padStart(4, "0")}`;
+      blocks.push({ id: carrierId, kind: "image", text: "" });
+      lastBlockId = carrierId;
+      nextBlockNo += 1;
+    }
+    const sourceZipPath = normalizeZipPath(path.posix.join(path.posix.dirname(ctx.href), decodeEntities(src)));
+    // Chapter-scoped fallback id: nextImageNo restarts per chapter, so a volume-level
+    // prefix would collide across chapters. chapterId is unique within the volume.
+    const fallbackId = `${chapterId}_img_${String(nextImageNo).padStart(3, "0")}`;
+    const id = attrFromAttrs(wrapperAttrs, "data-nc-asset-id") ?? attrFromAttrs(imgAttrs, "data-nc-asset-id") ?? fallbackId;
+    const alt = decodeEntities(attrFromAttrs(imgAttrs, "alt") ?? "");
+    const ext = path.posix.extname(sourceZipPath) || ".png";
+    assets.push({
+      id,
+      block: lastBlockId,
+      anchorType: "after_block",
+      alt,
+      sourceZipPath,
+      targetRelPath: `assets/images/${id}${ext}`,
+    });
+    nextImageNo += 1;
+  };
+
   for (const token of tokens) {
-    const tag = (token[1] ?? "hr").toLowerCase();
-    const attrsText = token[2] ?? token[4] ?? "";
-    const inner = token[3] ?? "";
+    const tag = token[1]?.toLowerCase();
 
     if (tag === "p") {
+      const attrsText = token[2] ?? "";
+      const inner = token[3] ?? "";
       const text = decodeEntities(stripTags(inner)).trim();
-      if (!text) continue;
-      const id = attrFromAttrs(attrsText, "data-nc-block-id") ?? `${chapterId}.b${String(nextBlockNo).padStart(4, "0")}`;
-      const kind = normalizeBlockKind(attrFromAttrs(attrsText, "class"), text);
-      blocks.push({ id, kind, text });
-      lastBlockId = id;
-      nextBlockNo += 1;
-      continue;
-    }
-
-    if (tag === "hr") {
-      const id = attrFromAttrs(attrsText, "data-nc-block-id") ?? `${chapterId}.b${String(nextBlockNo).padStart(4, "0")}`;
-      blocks.push({ id, kind: "separator", text: "---" });
-      lastBlockId = id;
-      nextBlockNo += 1;
+      if (text) {
+        const id = attrFromAttrs(attrsText, "data-nc-block-id") ?? `${chapterId}.b${String(nextBlockNo).padStart(4, "0")}`;
+        const blockKind = normalizeBlockKind(attrFromAttrs(attrsText, "class"), text);
+        blocks.push({ id, kind: blockKind, text });
+        lastBlockId = id;
+        nextBlockNo += 1;
+      }
+      // A paragraph may also wrap an image (<p><img/></p>).
+      for (const imgAttrs of imgAttrsList(inner)) pushImage("", imgAttrs);
       continue;
     }
 
     if (tag === "figure") {
-      const imgAttrs = firstAttrs(inner, "img");
-      const src = attrFromAttrs(imgAttrs, "src");
-      if (!src) continue;
-      const sourceZipPath = normalizeZipPath(path.posix.join(path.posix.dirname(ctx.href), decodeEntities(src)));
-      const fallbackId = `${volumeId}_img_${String(nextImageNo).padStart(3, "0")}`;
-      const id = attrFromAttrs(attrsText, "data-nc-asset-id") ?? fallbackId;
-      const alt = decodeEntities(attrFromAttrs(imgAttrs, "alt") ?? "");
-      const ext = path.posix.extname(sourceZipPath) || ".png";
-      assets.push({
-        id,
-        block: lastBlockId,
-        anchorType: "after_block",
-        alt,
-        sourceZipPath,
-        targetRelPath: `assets/images/${id}${ext}`,
-      });
-      nextImageNo += 1;
+      const attrsText = token[2] ?? "";
+      for (const imgAttrs of imgAttrsList(token[3] ?? "")) pushImage(attrsText, imgAttrs);
+      continue;
     }
+
+    if (token[4] !== undefined) {
+      // Standalone <img>, e.g. <div class="duokan-image-single"><img/></div> or bare <img/>.
+      pushImage("", token[4]);
+      continue;
+    }
+
+    // <hr> separator
+    const attrsText = token[5] ?? "";
+    const id = attrFromAttrs(attrsText, "data-nc-block-id") ?? `${chapterId}.b${String(nextBlockNo).padStart(4, "0")}`;
+    blocks.push({ id, kind: "separator", text: "---" });
+    lastBlockId = id;
+    nextBlockNo += 1;
   }
 
   // For image-first chapters, attach the image to the first block once known.
@@ -431,6 +462,10 @@ function firstAttrs(xml: string, tag: string): string {
   return new RegExp(`<${tag}\\b([^>]*)>`, "i").exec(xml)?.[1] ?? "";
 }
 
+function imgAttrsList(html: string): string[] {
+  return [...html.matchAll(/<img\b([^>]*?)\/?>/gi)].map((m) => m[1] ?? "");
+}
+
 function blockOf(xml: string, tag: string): string {
   return new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i").exec(xml)?.[1] ?? "";
 }
@@ -492,6 +527,43 @@ function chineseVolumeTitle(n: number): string {
     return `第${digits[tens]}十${ones ? digits[ones] : ""}卷`;
   }
   return `第${n}卷`;
+}
+
+// Chapter kinds that belong to the reading timeline. Everything else
+// (cover/nav/toc/colophon/introduction/illustration/title/afterword/extra) is
+// non-body: front/back matter that should not be treated as story spine.
+export const BODY_CHAPTER_KINDS = new Set(["chapter", "prologue", "epilogue", "interlude"]);
+
+export function isBodyChapterKind(kind: string): boolean {
+  return BODY_CHAPTER_KINDS.has(kind);
+}
+
+/**
+ * Deterministic chapter-kind classification from strong signals: EPUB
+ * `epub:type`, spine `properties`, the file name, and the title. Only clear
+ * signals are used; ambiguous pages fall back to `inferChapterKind` and can be
+ * refined later by the cleaning AI. Keeps front/back matter out of the body.
+ */
+export function classifyChapterKind(
+  href: string,
+  properties: string | undefined,
+  epubType: string | null,
+  title: string,
+  order: number,
+): string {
+  const props = (properties ?? "").toLowerCase().split(/\s+/);
+  if (props.includes("nav")) return "nav";
+  const name = path.posix.basename(href).toLowerCase().replace(/\.[a-z0-9]+$/, "").replace(/\d+$/, "");
+  const hay = `${name} ${(epubType ?? "").toLowerCase()} ${title}`;
+  if (/\bcover\b|封面/.test(hay)) return "cover";
+  if (/\bnav\b|\btoc\b|contents|目录|目錄/.test(hay)) return "toc";
+  if (/colophon|copyright|impressum|\blogo\b|message|版权|版權|制作|製作/.test(hay)) return "colophon";
+  if (/illustration|gallery|\bplate\b|插画|插畫|彩页|彩頁|彩插/.test(hay)) return "illustration";
+  if (/introduction|preface|\bintro\b|简介|簡介|前言|导读|導讀/.test(hay)) return "introduction";
+  if (/postscript|afterword|后记|後記|あとがき/.test(hay)) return "afterword";
+  if (/\bss\d*\b|\bextra\b|bonus|番外|特典/.test(hay)) return "extra";
+  if (/\btitle\b|扉页|扉頁/.test(name)) return "title";
+  return inferChapterKind(title, order);
 }
 
 function inferChapterKind(title: string, order: number): string {

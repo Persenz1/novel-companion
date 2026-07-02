@@ -12,7 +12,10 @@
 
 - `modules/bookpack-data.md`：bookpack、Markdown、Parsed / Accepted / Candidate / Review 文件。
 - `modules/toolchain.md`：CLI、Parser、Validator、Compiler、测试命令。
-- `modules/cleaning-pipeline.md`：EPUB 导入、AI 清洗、写回 bookpack 的前端清洗流水线。
+- `modules/cleaning-pipeline.md`：EPUB 导入、AI 清洗、写回 bookpack 的前端清洗流水线（MVP）。
+- `modules/cleaning-pipeline-v2-design.md`：清洗流水线 v2（确定性规范化 + 建议应用器 + 裁决队列 + 快照回滚 + 收口 gate），设计与实现落点。
+- `modules/real-epub-test-corpus.md`：真实 EPUB 测试语料登记表（预期基线 + 已知怪癖）。
+- `modules/compatibility-testing-plan.md`：真实 EPUB 极端兼容性测试规划。
 - `modules/provider-adapters.md`：DeepSeek / MiMo 等模型供应商适配层。
 - `modules/ai-workbench.md`：AI 起草、独立复核、数据工作台、Change 和回滚。
 - `modules/compiled-query.md`：`reader_index.json` 与 `getVisibleContext()`。

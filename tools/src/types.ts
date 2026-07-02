@@ -4,7 +4,12 @@
 // docs/modules/bookpack-data.md. The Chinese main text is the single spine;
 // Japanese only ever appears as reference content inside alignments.
 
-export type BlockKind = "paragraph" | "dialogue" | "separator" | "note";
+// Block kind is intentionally open. `paragraph`/`dialogue`/`separator`/`note`
+// are the built-in text kinds; `image` is an importer-synthesized carrier for a
+// standalone image (e.g. a cover or colour-plate page with no body text). The
+// cleaning AI may additionally assign semantic kinds (extra/notice/info/...),
+// which only annotate a block without changing its position in the sequence.
+export type BlockKind = "paragraph" | "dialogue" | "separator" | "note" | "image" | (string & {});
 
 export type AlignmentStatus = "parsed" | "pending_review" | "reviewed";
 

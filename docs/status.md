@@ -10,6 +10,7 @@
 - Compiler：生成 `compiled/reader_index.json`，且要求 validation report 为 `passed`。
 - Query：`getVisibleContext(current_block, read_boundary, options)` 按 `read_boundary` 防剧透过滤。
 - EPUB 清洗基础：`export-epub` / `import-epub` / `prepare-mimo` 已用受控 gray-tower fixture 验证，可导入、parse、validate 并生成章节任务包；真实模型调用不进入仓库自动测试。
+- 清洗流水线 v2（确定性规范化 + 建议应用器 + 裁决队列 + 快照回滚 + 收口 gate）：见 `modules/cleaning-pipeline-v2-design.md`。CLI `normalize` / `ingest-cleaning` / `apply-cleaning` / `cleaning-changes` / `rollback-cleaning` / `cleaning-readiness`，HTTP `/api/cleaning/{normalize,ingest,items,items/resolve,items/apply,changes,rollback,readiness}`，`/cleaning/` 新增「裁决队列」页。`markdownEdit` 有单测（node:test 24 例）。真实 COTE 三卷已端到端验证（见下）。
 - gray-tower fixture：在临时目录生成 Candidates / Review / Accepted / work_runs，不调用模型。
 - 自动测试：19 个 node:test 用例覆盖 marker 解析和 query 防剧透行为。
 
@@ -46,6 +47,8 @@
 
 测试所需分析数据由 fixture 在临时目录生成。长程测试也须在工作副本上跑（见 `modules/long-range-test.md` 和 `modules/long-range-test-phase-a-2026-07-01.md`）。不要把模型试跑数据或 fixture 输出混回提交态样例包。
 
+真实商业 EPUB 测试语料放在 `samples/real-epubs/`（本机，`*.epub` 已被 `.gitignore` 忽略，正文不入库）。只有测试登记表 + 预期基线 + 已知怪癖入库，见 `modules/real-epub-test-corpus.md` 与 `modules/compatibility-testing-plan.md`。当前语料：COTE 中译第 1 卷分三册（1-1/1-2/1-3），三卷 import+normalize 均 validation passed。
+
 ## 主要技术债
 
 - 长程 Phase A 已证明「全局 accepted + 当前卷正文」足以支撑 gray-tower 4 卷主线；暂不急着做卷/章级梗概、token 预算器、可选 RAG。
@@ -54,6 +57,7 @@
 - `work_runs.context_estimate` 只记录 block 数；真实模型调用已记录 `token_usage` 并可通过 `/api/usage` 聚合查看，但尚未做 token 预算器。
 - 同模型起草 / 复核目前只有文档要求，没有代码硬拒绝。
 - `AgentStore` 已避免实体 first_seen 被后卷覆盖、避免非实体同 ID 内容静默覆盖；但 Change `before` 仍不足以恢复完整 update / merge / deprecate。
-- 清洗 MiMo 建议当前写入报告并在界面展示，尚未做通用的“采纳建议 -> 改 Markdown/manifest/assets -> reparse/validate”应用器；图片 alt 是已实现的窄路径。
-- EPUB importer 已支持多个单卷 EPUB append 汇入同一 bookpack；真实 EPUB 的复杂目录 / 脚注 / 跨文件章节合并仍未验证。
+- 清洗 MiMo 建议的通用应用器已实现（`applySuggestion` + `cleaningStore.commitVolumeChange`：采纳 -> 改 Markdown/manifest -> reparse/validate -> 失败自动回滚 -> 记 `accepted/cleaning_changes.jsonl`）；仍未做的是 split_block/merge_blocks 自动化（当前人工）。
+- EPUB importer 多个单卷 EPUB append 汇入同一 bookpack 已用真实 COTE 三卷（1-1/1-2/1-3 → v01/v02/v03）验证通过；真实 EPUB 的脚注 / 跨文件章节 / 异常 nav / 日文原版仍未验证（见 `modules/compatibility-testing-plan.md`）。
+- 非正文页已按强信号分类章节 kind（`classifyChapterKind`），但尚未从阅读时间线剔除（timeline 未按 `isBodyChapterKind` 过滤）。
 - 阅读器防剧透已在 4 卷、填满 accepted 的工作副本上做过长程压测（gray-tower `v01`–`v04`，239 个时间线位置全扫）：0 越界泄漏、0 非单调回退，reveal 曲线单调（实体 14→23→31→36、relation_change 1→4→7→10），spoiler-bound 关系卡在其 `visible_from` 前一块隐藏、到位后出现。**真实书籍**级别的长程阅读压测仍未做；提交态样例包 accepted 为空，右栏走空态，需跑 agent 或 fixture 填数据后才见实体 / 卡片。
